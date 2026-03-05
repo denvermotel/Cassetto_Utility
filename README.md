@@ -42,6 +42,9 @@ Userscript per Tampermonkey / Greasemonkey che aggiunge una barra degli strument
 ### 🧳⬇ Scarica F24/F23
 Download massivo automatico dei PDF per tutti i versamenti dell'anno selezionato. Per F24: quietanza PDF (o Copia F24 come fallback). Per F23: copia PDF del modello. Lo stato viene salvato nello storage Tampermonkey per persistenza tra sessioni.
 
+### 🔄 Navigazione dinamica
+La barra rileva automaticamente i cambi di pagina e aggiorna i pulsanti al contesto corrente (lista F24, lista F23, dettaglio, versamenti). Non serve ricaricare la pagina. Dalla pagina Versamenti (`Ric=VERS`), pulsanti diretti per raggiungere Modello F24 o Modello F23.
+
 ### 📊 Report Excel
 Genera un file `.xls` con due fogli:
 - **Riepilogo**: Identificativo, Modalità, Anno, Tipo modello, Data report, Versamenti trovati, Scaricati/Errori/Non scaricati
@@ -99,6 +102,7 @@ VRDLCU75T10F205Z_2024_11_30_CopiaF24_idx0.pdf  ← persona fisica CF
 ## 🔧 Note tecniche
 
 - Lo storage usa `GM_setValue`/`GM_getValue` (Tampermonkey) con fallback su `localStorage`
+- Monitoraggio URL ogni 500ms: i pulsanti si adattano automaticamente alla pagina corrente
 - F24: quietanza disponibile solo post 01/10/2006 via servizi telematici AdE
 - F23: solo copia PDF del modello
 - Delay: 600 ms tra download

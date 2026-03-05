@@ -30,6 +30,8 @@
  *   - NEW: Link istruzioni (ℹ️) nella barra
  *   - NEW: Licenza GPL-3.0 allineata a FE-Utility
  *   - NEW: Grafica barra omogenea con FE-Utility
+ *   - NEW: Monitoraggio URL — pulsanti si aggiornano alla navigazione
+ *   - NEW: Pagina Versamenti (Ric=VERS) con link a F24 e F23
  */
 (function () {
     'use strict';
@@ -76,15 +78,23 @@
         } catch (e) { }
     }
 
-    /* ─── PAGE CONTEXT DETECTION ─────────────────────────────────── */
-    var url          = window.location.href;
-    var isF24List    = url.indexOf('Ric=F24')    !== -1 && url.indexOf('Ric=DetF24') === -1;
-    var isF24Detail  = url.indexOf('Ric=DetF24') !== -1;
-    var isF23List    = url.indexOf('Ric=F23')    !== -1 && url.indexOf('Ric=DetF23') === -1;
-    var isF23Detail  = url.indexOf('Ric=DetF23') !== -1;
-    var isListPage   = isF24List   || isF23List;
-    var isDetailPage = isF24Detail || isF23Detail;
-    var docType      = isF24List || isF24Detail ? 'F24' : 'F23';
+    /* ─── PAGE CONTEXT DETECTION (dinamico) ──────────────────────── */
+    // Queste variabili vengono ricalcolate ad ogni cambio URL
+    var isF24List, isF24Detail, isF23List, isF23Detail;
+    var isListPage, isDetailPage, isVersPage, docType;
+
+    function detectContext() {
+        var href = window.location.href;
+        isF24List    = href.indexOf('Ric=F24')    !== -1 && href.indexOf('Ric=DetF24') === -1;
+        isF24Detail  = href.indexOf('Ric=DetF24') !== -1;
+        isF23List    = href.indexOf('Ric=F23')    !== -1 && href.indexOf('Ric=DetF23') === -1;
+        isF23Detail  = href.indexOf('Ric=DetF23') !== -1;
+        isListPage   = isF24List   || isF23List;
+        isDetailPage = isF24Detail || isF23Detail;
+        isVersPage   = href.indexOf('Ric=VERS') !== -1 && !isListPage && !isDetailPage;
+        docType      = (isF24List || isF24Detail) ? 'F24' : 'F23';
+    }
+    detectContext();
 
     /* ─── IDENTIFIER EXTRACTION (PIVA 11 cifre | CF 16 caratteri) ── */
     // Priorità:
@@ -136,7 +146,6 @@
     function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
     /* ─── BUILD FILENAME ─────────────────────────────────────────── */
-    // Pattern: CODICE_ANNO_MESE_GIORNO_TipoDoc_idxN.pdf
     function buildFilename(tipo, anno, dateStr, idx) {
         var cod = getIdentifier().code;
         var d   = parseDate(dateStr);
@@ -232,46 +241,15 @@
         '#CU_InfoLink:hover{background:rgba(255,255,255,0.25)!important;}';
     document.head.appendChild(stile);
 
-    /* ─── BUILD PANEL ────────────────────────────────────────────── */
-    var idInfo = getIdentifier();
-    var icon = isDelegato() ? '\uD83D\uDC65' : (idInfo.tipo === 'cf' ? '\uD83D\uDC64' : '\uD83C\uDFE2');
-    var badgeTitle = isDelegato() ? 'Cassetto delegato' : (idInfo.tipo === 'cf' ? 'Codice Fiscale' : 'Partita IVA');
-
-    // Button definitions per page type
-    var btns = '';
-    if (isF24List) {
-        btns =
-            '<button class="cuBtn cu-green"  data-action="downloadAll">\uD83E\uDDC3\u2B07 Scarica F24</button>' +
-            '<button class="cuBtn cu-blue"   data-action="copyProto">\uD83D\uDCCB Protocolli</button>' +
-            '<button class="cuBtn cu-purple" data-action="reportExcel">\uD83D\uDCCA Report Excel</button>' +
-            '<button class="cuBtn cu-orange" data-action="summary">\uD83D\uDD0D Riepilogo</button>';
-    } else if (isF23List) {
-        btns =
-            '<button class="cuBtn cu-green"  data-action="downloadAllF23">\uD83E\uDDC3\u2B07 Scarica F23</button>' +
-            '<button class="cuBtn cu-purple" data-action="reportExcel">\uD83D\uDCCA Report Excel</button>' +
-            '<button class="cuBtn cu-orange" data-action="summary">\uD83D\uDD0D Riepilogo</button>';
-    } else if (isF24Detail) {
-        btns =
-            '<button class="cuBtn cu-green" data-action="downloadDetailPDF">\uD83E\uDDC3\u2B07 Copia F24 (PDF)</button>' +
-            '<button class="cuBtn cu-teal"  data-action="downloadQuietanza">\uD83E\uDDF3\u2B07 Quietanza (PDF)</button>';
-    } else if (isF23Detail) {
-        btns =
-            '<button class="cuBtn cu-green" data-action="downloadDetailPDF">\uD83E\uDDC3\u2B07 Copia F23 (PDF)</button>';
-    } else {
-        btns =
-            '<button class="cuBtn cu-orange" data-action="goToVers">\u26A0 Vai a Versamenti</button>';
-    }
-
-    var docTagHtml = (isListPage || isDetailPage) ? '<span class="cu-dtag">' + docType + '</span>' : '';
-
+    /* ─── BUILD PANEL (shell fissa — i pulsanti sono dinamici) ──── */
     var p = document.createElement('div');
     p.id = PANEL_ID;
     p.innerHTML =
         '<div id="CU_TopRow">' +
             '<span id="CU_Logo">\uD83E\uDDF3 Cassetto_Utility v' + VERSION + '</span>' +
-            '<span class="cu-badge" title="' + badgeTitle + '">' + icon + ' ' + esc(idInfo.code) + '</span>' +
-            docTagHtml +
-            btns +
+            '<span id="CU_Badge" class="cu-badge"></span>' +
+            '<span id="CU_DocTag"></span>' +
+            '<span id="CU_Buttons" style="all:initial!important;display:contents!important;"></span>' +
             '<span style="all:initial!important;flex:1 1 auto!important;min-width:10px!important;"></span>' +
             '<a id="CU_InfoLink" href="' + INSTRUCTIONS_URL + '" target="_blank" rel="noopener noreferrer" title="Istruzioni Cassetto_Utility">\u2139\uFE0F</a>' +
             '<button id="CU_X" style="all:initial;display:inline-flex;align-items:center;' +
@@ -285,6 +263,98 @@
         '</div>';
 
     document.documentElement.appendChild(p);
+
+    /* ─── REBUILD BUTTONS (chiamata ad ogni cambio URL) ──────────── */
+    function rebuildButtons() {
+        detectContext();
+
+        // Badge identificativo
+        var idInfo = getIdentifier();
+        var icon = isDelegato() ? '\uD83D\uDC65' : (idInfo.tipo === 'cf' ? '\uD83D\uDC64' : '\uD83C\uDFE2');
+        var badgeTitle = isDelegato() ? 'Cassetto delegato' : (idInfo.tipo === 'cf' ? 'Codice Fiscale' : 'Partita IVA');
+        var badgeEl = document.getElementById('CU_Badge');
+        if (badgeEl) {
+            badgeEl.textContent = icon + ' ' + idInfo.code;
+            badgeEl.title = badgeTitle;
+        }
+
+        // Doc type tag
+        var docTagEl = document.getElementById('CU_DocTag');
+        if (docTagEl) {
+            if (isListPage || isDetailPage) {
+                docTagEl.className = 'cu-dtag';
+                docTagEl.textContent = docType;
+            } else if (isVersPage) {
+                docTagEl.className = 'cu-dtag';
+                docTagEl.textContent = 'Versamenti';
+            } else {
+                docTagEl.className = '';
+                docTagEl.textContent = '';
+            }
+        }
+
+        // Pulsanti
+        var container = document.getElementById('CU_Buttons');
+        if (!container) return;
+
+        var btnsHtml = '';
+
+        if (isF24List) {
+            btnsHtml =
+                '<button class="cuBtn cu-green"  data-action="downloadAll">\uD83E\uDDC3\u2B07 Scarica F24</button>' +
+                '<button class="cuBtn cu-blue"   data-action="copyProto">\uD83D\uDCCB Protocolli</button>' +
+                '<button class="cuBtn cu-purple" data-action="reportExcel">\uD83D\uDCCA Report Excel</button>' +
+                '<button class="cuBtn cu-orange" data-action="summary">\uD83D\uDD0D Riepilogo</button>';
+        } else if (isF23List) {
+            btnsHtml =
+                '<button class="cuBtn cu-green"  data-action="downloadAllF23">\uD83E\uDDC3\u2B07 Scarica F23</button>' +
+                '<button class="cuBtn cu-purple" data-action="reportExcel">\uD83D\uDCCA Report Excel</button>' +
+                '<button class="cuBtn cu-orange" data-action="summary">\uD83D\uDD0D Riepilogo</button>';
+        } else if (isF24Detail) {
+            btnsHtml =
+                '<button class="cuBtn cu-green" data-action="downloadDetailPDF">\uD83E\uDDC3\u2B07 Copia F24 (PDF)</button>' +
+                '<button class="cuBtn cu-teal"  data-action="downloadQuietanza">\uD83E\uDDF3\u2B07 Quietanza (PDF)</button>';
+        } else if (isF23Detail) {
+            btnsHtml =
+                '<button class="cuBtn cu-green" data-action="downloadDetailPDF">\uD83E\uDDC3\u2B07 Copia F23 (PDF)</button>';
+        } else if (isVersPage) {
+            // Pagina Versamenti: mostra link diretti a F24 e F23
+            btnsHtml =
+                '<button class="cuBtn cu-green" data-action="goToF24">\uD83D\uDCC4 Modello F24</button>' +
+                '<button class="cuBtn cu-teal"  data-action="goToF23">\uD83D\uDCC4 Modello F23</button>';
+        } else {
+            btnsHtml =
+                '<button class="cuBtn cu-orange" data-action="goToVers">\u26A0 Vai a Versamenti</button>';
+        }
+
+        container.innerHTML = btnsHtml;
+
+        // Bind eventi sui nuovi pulsanti
+        container.querySelectorAll('.cuBtn').forEach(function (btn) {
+            btn.addEventListener('click', handleAction);
+        });
+
+        // Nasconde la status row al cambio pagina
+        hideSt();
+        summaryVisible = false;
+
+        aggiornaPadding();
+        console.log('[CU] Contesto:', isVersPage ? 'VERS' : isF24List ? 'F24 lista' : isF23List ? 'F23 lista' : isF24Detail ? 'F24 dettaglio' : isF23Detail ? 'F23 dettaglio' : 'altro');
+    }
+
+    // Prima costruzione
+    rebuildButtons();
+
+    /* ─── URL CHANGE MONITOR ─────────────────────────────────────── */
+    // Polling ogni 500ms: se la URL è cambiata, ricostruisce i pulsanti
+    var _lastUrl = window.location.href;
+    setInterval(function () {
+        var cur = window.location.href;
+        if (cur !== _lastUrl) {
+            _lastUrl = cur;
+            rebuildButtons();
+        }
+    }, 500);
 
     /* ─── PADDING DINAMICO ───────────────────────────────────────── */
     var _padTimer;
@@ -338,7 +408,7 @@
     }
 
     function setDis(val) {
-        var btns = document.querySelectorAll('#CU_TopRow .cuBtn');
+        var btns = document.querySelectorAll('#CU_Buttons .cuBtn');
         btns.forEach(function (b) { b.disabled = val; });
     }
 
@@ -540,6 +610,22 @@
             return;
         }
 
+        if (action === 'goToF24') {
+            // Cerca il link alla pagina F24 nella pagina corrente e lo clicca,
+            // altrimenti naviga direttamente
+            var linkF24 = document.querySelector('a[href*="Ric=F24"]');
+            if (linkF24) { linkF24.click(); }
+            else { window.location.href = BASE_URL + '/cassfisc-web/CassettoFiscaleServlet?Ric=F24'; }
+            return;
+        }
+
+        if (action === 'goToF23') {
+            var linkF23 = document.querySelector('a[href*="Ric=F23"]');
+            if (linkF23) { linkF23.click(); }
+            else { window.location.href = BASE_URL + '/cassfisc-web/CassettoFiscaleServlet?Ric=F23'; }
+            return;
+        }
+
         if (action === 'copyProto') {
             var rows = collectF24();
             navigator.clipboard.writeText(rows.map(function (r) { return r.date + '\t' + r.proto; }).join('\n')).then(function () {
@@ -595,11 +681,6 @@
             setDis(false); return;
         }
     }
-
-    /* ─── BIND BUTTON EVENTS ─────────────────────────────────────── */
-    document.querySelectorAll('#CU_TopRow .cuBtn').forEach(function (btn) {
-        btn.addEventListener('click', handleAction);
-    });
 
     console.log('[Cassetto_Utility] v' + VERSION + ' caricato');
 

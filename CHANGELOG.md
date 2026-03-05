@@ -4,6 +4,8 @@
 
 ### Nuovo
 - **Conversione a Tampermonkey/Greasemonkey**: lo script non è più un bookmarklet ma un userscript con header `==UserScript==`, installabile direttamente dal browser. Compatibile con Tampermonkey (Chrome/Edge/Firefox) e Greasemonkey (Firefox)
+- **Monitoraggio URL dinamico**: polling ogni 500ms rileva i cambi di pagina e ricostruisce automaticamente i pulsanti della barra. Non serve più ricaricare la pagina quando si naviga tra le sezioni del Cassetto Fiscale
+- **Pagina Versamenti (Ric=VERS)**: sulla pagina hub dei versamenti la barra mostra i pulsanti "📄 Modello F24" e "📄 Modello F23" per navigazione diretta. Badge "Versamenti" visibile
 - **Storage persistente** (`GM_setValue`/`GM_getValue`): il log dei download viene salvato nello storage Tampermonkey (persistente tra sessioni e aggiornamenti script). Fallback automatico su `localStorage` se non disponibile
 - **Tab riapertura** barra dopo chiusura con ✕ (prima la chiusura era definitiva nel bookmarklet)
 - **Link istruzioni** (ℹ️) nella barra, posizionato a destra vicino alla ✕

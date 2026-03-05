@@ -690,6 +690,12 @@
                 </div>
 
                 <div class="feature-card">
+                    <div class="feature-icon">🔄</div>
+                    <h4>Navigazione dinamica</h4>
+                    <p>La barra rileva automaticamente i cambi di pagina e aggiorna i pulsanti al contesto corrente. Dalla pagina Versamenti (<code>Ric=VERS</code>), pulsanti diretti per raggiungere Modello F24 o F23. Non serve mai ricaricare la pagina.</p>
+                </div>
+
+                <div class="feature-card">
                     <div class="feature-icon">👥</div>
                     <h4>Cassetto delegato</h4>
                     <p>Rilevamento automatico dell'identificativo: PIVA del soggetto delegato, PIVA propria (11 cifre), o Codice Fiscale (16 caratteri) con cascata di priorità.</p>
@@ -745,7 +751,7 @@ VRDLCU75T10F205Z_2024_11_30_CopiaF24_idx0.pdf  ← persona fisica CF
             <p>Tutte le elaborazioni avvengono esclusivamente client-side nel tuo browser. Nessun dato viene raccolto, salvato o trasmesso a server esterni. Lo script opera solo nel dominio <code>cassetto.agenziaentrate.gov.it</code>.</p>
 
             <h3>Dettagli implementativi</h3>
-            <p>Lo storage usa <code>GM_setValue</code>/<code>GM_getValue</code> (Tampermonkey) con fallback automatico su <code>localStorage</code>. La quietanza F24 è disponibile solo per versamenti successivi al 01/10/2006 tramite servizi telematici AdE. Il delay tra download è di 600 ms.</p>
+            <p>Lo storage usa <code>GM_setValue</code>/<code>GM_getValue</code> (Tampermonkey) con fallback automatico su <code>localStorage</code>. Il monitoraggio URL (polling ogni 500ms) rileva la navigazione interna e ricostruisce i pulsanti della barra senza bisogno di ricaricare la pagina. La quietanza F24 è disponibile solo per versamenti successivi al 01/10/2006 tramite servizi telematici AdE. Il delay tra download è di 600 ms.</p>
         </div>
     </section>
 
@@ -762,6 +768,8 @@ VRDLCU75T10F205Z_2024_11_30_CopiaF24_idx0.pdf  ← persona fisica CF
                 </div>
                 <ul class="changelog-list">
                     <li><span class="changelog-tag new">NEW</span> Conversione da bookmarklet a userscript Tampermonkey/Greasemonkey</li>
+                    <li><span class="changelog-tag new">NEW</span> Monitoraggio URL dinamico: i pulsanti si aggiornano automaticamente alla navigazione tra le sezioni</li>
+                    <li><span class="changelog-tag new">NEW</span> Pagina Versamenti (<code>Ric=VERS</code>): pulsanti "Modello F24" e "Modello F23" per navigazione diretta</li>
                     <li><span class="changelog-tag new">NEW</span> Storage persistente (<code>GM_setValue</code>/<code>GM_getValue</code>) per log download tra sessioni</li>
                     <li><span class="changelog-tag new">NEW</span> Tab riapertura barra dopo chiusura con ✕</li>
                     <li><span class="changelog-tag new">NEW</span> Link istruzioni (ℹ️) nella barra</li>
