@@ -7,7 +7,7 @@
 // @description    Toolbox per cassetto.agenziaentrate.gov.it: download massivo F24/F23/CU, Report Excel, supporto cassetto proprio e delegato
 // @author         denvermotel
 // @match          https://cassetto.agenziaentrate.gov.it/*
-// @icon           https://www.agenziaentrate.gov.it/portale/favicon.ico
+// @icon           https://www.agenziaentrate.gov.it/portale/documents/20152/0/favicon/249a8c43-e3c2-26e4-3bfb-90d79bff7332
 // @grant          GM_setValue
 // @grant          GM_getValue
 // @grant          GM_info
