@@ -2,17 +2,16 @@
 
 **Toolbox per il portale cassetto.agenziaentrate.gov.it**
 
-Userscript per Tampermonkey / Greasemonkey che aggiunge una barra degli strumenti al Cassetto Fiscale dell'Agenzia delle Entrate, con download massivo F24/F23 e Report Excel con raffronto.
+Userscript per Tampermonkey / Greasemonkey che aggiunge una barra degli strumenti al Cassetto Fiscale dell'Agenzia delle Entrate, con download massivo F24/F23/CU e Report Excel.
 
-[![Version](https://img.shields.io/badge/versione-0.05%20beta-green)](#)
+[![Version](https://img.shields.io/badge/versione-0.06%20beta-green)](#)
 [![License: GPL v3](https://img.shields.io/badge/licenza-GPL%20v3-blue)](https://www.gnu.org/licenses/gpl-3.0)
 [![Tampermonkey](https://img.shields.io/badge/Tampermonkey-compatibile-brightgreen)](https://www.tampermonkey.net/)
 [![Greasemonkey](https://img.shields.io/badge/Greasemonkey-compatibile-orange)](https://www.greasespot.net/)
 
 ---
 
-> ⚠️ **VERSIONE ANCORA IN FASE DI SVILUPPO E TEST**
-> Funziona correttamente il download massivo F24/F23 e il Report Excel.
+> ⚠️ **VERSIONE IN FASE DI SVILUPPO E TEST**
 
 ---
 
@@ -29,104 +28,72 @@ Userscript per Tampermonkey / Greasemonkey che aggiunge una barra degli strument
 
    **[➤ Installa Cassetto_Utility.user.js](https://raw.githubusercontent.com/denvermotel/Cassetto_Utility/refs/heads/main/Cassetto_Utility.user.js)**
 
-   Tampermonkey aprirà automaticamente la finestra di conferma installazione.
-
-3. Accedi su [cassetto.agenziaentrate.gov.it](https://cassetto.agenziaentrate.gov.it), naviga in **Versamenti → Modello F24** oppure **Versamenti → Modello F23**, seleziona l'anno — la barra verde apparirà automaticamente in cima alla pagina.
-
-> ⚠️ Consenti sempre i download multipli quando il browser lo chiede per `agenziaentrate.gov.it`.
+3. Accedi su [cassetto.agenziaentrate.gov.it](https://cassetto.agenziaentrate.gov.it) — la barra verde apparirà automaticamente.
 
 ---
 
 ## ✨ Funzionalità
 
 ### 🧳⬇ Scarica F24/F23
-Download massivo automatico dei PDF per tutti i versamenti dell'anno selezionato. Per F24: quietanza PDF (o Copia F24 come fallback). Per F23: copia PDF del modello. Lo stato viene salvato nello storage Tampermonkey per persistenza tra sessioni.
+Download massivo delle quietanze/copie PDF per tutti i versamenti dell'anno selezionato.
+
+### 🧳⬇ Scarica CU
+Download massivo dei PDF di tutte le Certificazioni Uniche ricevute (`Ric=CUK`). Se le CU superano 15, viene mostrato un alert di conferma prima dell'avvio.
+
+### 📊 Report Excel F24/F23
+File `.xls` con Elenco (dettaglio) + Riepilogo e raffronto ✅/❌/⏳.
+
+### 📊 Report Excel CU
+File `.xls` con elenco e riepilogo di tutte le CU. Per ogni certificazione vengono recuperati:
+- **Denominazione sostituto d'imposta** (dal Quadro DA, campi DA001 002 e 003)
+- **Causale** (es. A = lavoro autonomo)
+- **Ammontare lordo corrisposto**
+- **Imponibile**
+- **Ritenute a titolo di acconto**
+
+### 🔍 Ricerche tributi F24
+Supporto completo per la pagina "Ricerche tributi F24" (`Ric=F24Sel`):
+- **Selettore Date** (Anno/Trimestre/Mese) nel tab "Ricerca per data versamento" per compilare automaticamente i campi Dal/Al
+- Download batch e Report Excel dai risultati di ricerca
 
 ### 🔄 Navigazione dinamica
-La barra rileva automaticamente i cambi di pagina e aggiorna i pulsanti al contesto corrente (lista F24, lista F23, dettaglio, versamenti). Non serve ricaricare la pagina. Dalla pagina Versamenti (`Ric=VERS`), pulsanti diretti per raggiungere Modello F24 o Modello F23.
-
-### 📊 Report Excel
-Genera un file `.xls` con due fogli:
-- **Riepilogo**: Identificativo, Modalità, Anno, Tipo modello, Data report, Versamenti trovati, Scaricati/Errori/Non scaricati
-- **Dettaglio**: N°, Data, Importo, Protocollo (solo F24), Nome File, Stato — con colorazione righe (🟢 scaricato · 🔴 errore · 🟡 non scaricato)
-
-### 📋 Protocolli
-Copia in clipboard data + numero di protocollo di tutti i versamenti F24 visibili nella pagina.
-
-### 🔍 Riepilogo
-Toggle rapido nella barra: mostra/nasconde conteggi di versamenti trovati, quietanze e file scaricati.
+La barra rileva automaticamente i cambi di pagina e aggiorna i pulsanti. Dalla pagina Versamenti, pulsanti diretti per F24/F23. Dalle pagine generiche, link rapidi "Vai a CU" e "Vai a Versamenti".
 
 ### 👥 Cassetto delegato
-Rilevamento automatico dell'identificativo con cascata di priorità:
-
-| Priorità | Caso | Sorgente | Icona |
-|---|---|---|---|
-| 1 | Cassetto delegato | `div.section.border.border-primary.my-1.bg-light.px-3` → PIVA soggetto delegato | 👥 |
-| 2a | Cassetto proprio – Società | `#user-info-data-container p.mb-2` → 11 cifre (PIVA) | 🏢 |
-| 2b | Cassetto proprio – Persona fisica | `#user-info-data-container p.mb-2` → 16 caratteri (CF) | 👤 |
-| 3 | Fallback | Primo numero 11 cifre in `#user-info` | 👤 |
+Rilevamento automatico PIVA delegato / PIVA propria / CF con cascata di priorità.
 
 ---
 
-## 📋 Differenze F24 vs F23
+## 📋 Pulsanti per contesto
 
-| Caratteristica | F24 | F23 |
+| Pulsante | Contesto | Descrizione |
 |---|---|---|
-| Quietanza disponibile | ✅ Sì (dal 01/10/2006) | ❌ No — solo copia PDF |
-| Protocollo in lista | ✅ Visibile in tabella | ❌ Solo nel dettaglio |
-| Nomi file | `…_QuietanzaF24_…` / `…_CopiaF24_…` | `…_CopiaF23_…` |
-
----
-
-## 📁 Formato nomi file
-
-| Tipo | Formato |
-|---|---|
-| Quietanza F24 | `CODICE_ANNO_MESE_GIORNO_QuietanzaF24_idxN.pdf` |
-| Copia F24 | `CODICE_ANNO_MESE_GIORNO_CopiaF24_idxN.pdf` |
-| Copia F23 | `CODICE_ANNO_MESE_GIORNO_CopiaF23_idxN.pdf` |
-| Report Excel | `CODICE_ANNO_ReportF24_CassettoUtility.xls` / `…ReportF23…` |
-
-`CODICE` = PIVA (11 cifre), CF (16 caratteri) o PIVA del delegato — estratto automaticamente.
-
-**Esempi:**
-```
-09876543210_2025_03_15_QuietanzaF24_idx2.pdf   ← società delegata
-VRDLCU75T10F205Z_2024_11_30_CopiaF24_idx0.pdf  ← persona fisica CF
-03456789012_2023_04_27_CopiaF23_idx0.pdf        ← società PIVA
-09876543210_2025_ReportF24_CassettoUtility.xls  ← report Excel
-```
+| 🧳⬇ **Scarica F24** | Lista F24 / Ricerca F24 | Quietanza PDF o Copia F24 (fallback) |
+| 🧳⬇ **Scarica F23** | Lista F23 | Copia PDF modello F23 |
+| 🧳⬇ **Scarica CU** | Lista CU | Download massivo PDF CU via POST (alert se > 15) |
+| 📊 **Report Excel** | Lista F24/F23 / Ricerca F24 | `.xls` con Elenco + Riepilogo |
+| 📊 **Report Excel CU** | Lista CU | `.xls` con denominazione sostituto + importi da Quadro AU |
+| 📋 **Protocolli** | Lista F24 | Copia data + protocollo in clipboard |
+| 📅 **Selettore Date** | Ricerche tributi F24 | Anno/Trimestre/Mese → compila Dal/Al |
+| 🧳⬇ **Genera PDF CU** | Dettaglio CU | Download PDF singola CU |
+| 🧳⬇ **Copia F24** | Dettaglio F24 | PDF copia modello F24 |
+| 🧳⬇ **Quietanza** | Dettaglio F24 | Quietanza AdE |
+| 🧳⬇ **Copia F23** | Dettaglio F23 | PDF copia modello F23 |
+| 📄 **Vai a CU** / ⚠ **Vai a Versamenti** | Pagine generiche | Link di navigazione rapida |
 
 ---
 
 ## 🔧 Note tecniche
 
-- Lo storage usa `GM_setValue`/`GM_getValue` (Tampermonkey) con fallback su `localStorage`
-- Monitoraggio URL ogni 500ms: i pulsanti si adattano automaticamente alla pagina corrente
-- F24: quietanza disponibile solo post 01/10/2006 via servizi telematici AdE
-- F23: solo copia PDF del modello
-- Delay: 600 ms tra download
-- Privacy: opera solo nel dominio `cassetto.agenziaentrate.gov.it`, nessun dato viene inviato a server esterni
-
-### Compatibilità browser
-
-| Browser | Estensione | Stato |
-|---------|-----------|-------|
-| Chrome / Chromium | Tampermonkey | 🔧 in fase di test |
-| Firefox | Tampermonkey | 🔧 in fase di test |
-| Firefox | Greasemonkey 4 | ❌ non testato |
-| Edge | Tampermonkey | 🔧 in fase di test |
-
----
-
-## 📄 File
-
-| File | Descrizione |
-|---|---|
-| `Cassetto_Utility.user.js` | Userscript Tampermonkey/Greasemonkey |
-| `index.html` | Pagina GitHub Pages con istruzioni |
-| `README.md` | Questo file |
-| `CHANGELOG.md` | Storico versioni |
+- Storage: `GM_setValue`/`GM_getValue` con fallback `localStorage`
+- Monitoraggio URL ogni 500ms per aggiornamento dinamico pulsanti
+- CU PDF: generato via POST (`Ric=CUK, Anno, Protocollo, stampa=P, Fascicoli=SI, TipoStampa=C`)
+- CU denominazione: fetch del Quadro DA con parsing HTML (campi DA001 002 e 003)
+- CU importi: fetch del Quadro AU con parsing HTML
+- F24 quietanza: disponibile solo post 01/10/2006
+- Excel: Foglio 1 = Elenco (dettaglio), Foglio 2 = Riepilogo
+- Delay tra download: 600ms (F24/F23), 800ms (CU)
+- Privacy: opera solo nel dominio `cassetto.agenziaentrate.gov.it`
 
 ---
 

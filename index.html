@@ -1,846 +1,226 @@
-<!-- v0.05 beta -->
+<!-- v0.06 beta -->
 <!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cassetto_Utility — Toolbox per il Cassetto Fiscale</title>
-    <meta name="description" content="Userscript per il portale cassetto.agenziaentrate.gov.it — download massivo F24/F23, Report Excel con raffronto, supporto cassetto proprio e delegato.">
+    <meta name="description" content="Userscript per cassetto.agenziaentrate.gov.it — download massivo F24/F23/CU, Report Excel con importi, supporto cassetto proprio e delegato.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --green-900: #1a3a1c;
-            --green-800: #1b5e20;
-            --green-700: #2e7d32;
-            --green-600: #388e3c;
-            --green-500: #43a047;
-            --green-400: #66bb6a;
-            --green-300: #81c784;
-            --green-200: #a5d6a7;
-            --green-100: #c8e6c9;
-            --green-50: #e8f5e9;
-            --gray-900: #111827;
-            --gray-800: #1f2937;
-            --gray-700: #374151;
-            --gray-600: #4b5563;
-            --gray-500: #6b7280;
-            --gray-400: #9ca3af;
-            --gray-300: #d1d5db;
-            --gray-200: #e5e7eb;
-            --gray-100: #f3f4f6;
-            --gray-50: #f9fafb;
-            --white: #ffffff;
-            --danger: #ef5350;
-            --font-body: 'DM Sans', sans-serif;
-            --font-mono: 'JetBrains Mono', monospace;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        html { scroll-behavior: smooth; }
-
-        body {
-            font-family: var(--font-body);
-            background: var(--gray-50);
-            color: var(--gray-800);
-            line-height: 1.65;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        /* ─── HERO ──────────────────────────────────────── */
-        .hero {
-            background: linear-gradient(135deg, var(--green-900) 0%, var(--green-700) 50%, var(--green-600) 100%);
-            color: var(--white);
-            padding: 80px 24px 60px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -20%;
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%);
-            border-radius: 50%;
-        }
-
-        .hero::after {
-            content: '';
-            position: absolute;
-            bottom: -30%;
-            left: -10%;
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 70%);
-            border-radius: 50%;
-        }
-
-        .hero-inner {
-            max-width: 880px;
-            margin: 0 auto;
-            position: relative;
-            z-index: 1;
-        }
-
-        .hero-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            background: rgba(255,255,255,0.12);
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 100px;
-            padding: 6px 16px;
-            font-size: 13px;
-            font-weight: 500;
-            margin-bottom: 24px;
-            backdrop-filter: blur(4px);
-        }
-
-        .hero-badge .dot {
-            width: 8px;
-            height: 8px;
-            background: var(--green-400);
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
-        }
-
-        .hero h1 {
-            font-size: clamp(2.2rem, 5vw, 3.2rem);
-            font-weight: 700;
-            line-height: 1.15;
-            margin-bottom: 16px;
-            letter-spacing: -0.02em;
-        }
-
-        .hero h1 span {
-            background: linear-gradient(90deg, var(--green-200), var(--green-100));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .hero p.subtitle {
-            font-size: 1.15rem;
-            color: var(--green-200);
-            max-width: 600px;
-            margin-bottom: 32px;
-            line-height: 1.6;
-        }
-
-        .hero-actions {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-family: var(--font-body);
-            font-size: 15px;
-            font-weight: 600;
-            text-decoration: none;
-            transition: all 0.2s;
-            cursor: pointer;
-            border: none;
-        }
-
-        .btn-primary {
-            background: var(--white);
-            color: var(--green-800);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        }
-
-        .btn-primary:hover {
-            background: var(--green-50);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-        }
-
-        .btn-secondary {
-            background: rgba(255,255,255,0.12);
-            color: var(--white);
-            border: 1px solid rgba(255,255,255,0.25);
-        }
-
-        .btn-secondary:hover {
-            background: rgba(255,255,255,0.2);
-        }
-
-        /* ─── TOOLBAR PREVIEW ───────────────────────────── */
-        .toolbar-preview {
-            max-width: 880px;
-            margin: -24px auto 0;
-            padding: 0 24px;
-            position: relative;
-            z-index: 2;
-        }
-
-        .toolbar-mock {
-            background: var(--green-700);
-            border-radius: 10px;
-            padding: 10px 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 13px;
-            color: var(--white);
-            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-            overflow-x: auto;
-            flex-wrap: nowrap;
-        }
-
-        .toolbar-mock .title {
-            font-weight: 700;
-            white-space: nowrap;
-            padding-right: 10px;
-            border-right: 1px solid rgba(255,255,255,0.25);
-            margin-right: 4px;
-        }
-
-        .toolbar-mock .mock-btn {
-            background: var(--green-600);
-            padding: 5px 12px;
-            border-radius: 4px;
-            white-space: nowrap;
-            font-size: 12px;
-            font-weight: 500;
-        }
-
-        .toolbar-mock .mock-badge {
-            font-size: 11px;
-            color: #80cbc4;
-            border: 1px solid rgba(255,255,255,0.25);
-            padding: 3px 8px;
-            border-radius: 3px;
-            white-space: nowrap;
-        }
-
-        .toolbar-mock .mock-dtag {
-            background: var(--green-600);
-            font-size: 11px;
-            padding: 3px 8px;
-            border-radius: 3px;
-            white-space: nowrap;
-        }
-
-        .toolbar-mock .spacer { flex: 1; }
-
-        .toolbar-mock .mock-info {
-            width: 26px;
-            height: 26px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 4px;
-            background: rgba(255,255,255,0.1);
-            font-size: 14px;
-        }
-
-        .toolbar-mock .mock-close {
-            width: 26px;
-            height: 26px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 4px;
-            background: var(--danger);
-            font-weight: 700;
-            font-size: 13px;
-        }
-
-        .toolbar-caption {
-            text-align: center;
-            font-size: 13px;
-            color: var(--gray-500);
-            margin-top: 12px;
-        }
-
-        /* ─── CONTENT SECTIONS ──────────────────────────── */
-        .container {
-            max-width: 880px;
-            margin: 0 auto;
-            padding: 0 24px;
-        }
-
-        section {
-            padding: 64px 0;
-        }
-
-        section + section {
-            border-top: 1px solid var(--gray-200);
-        }
-
-        .section-label {
-            display: inline-block;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: var(--green-600);
-            background: var(--green-50);
-            padding: 4px 12px;
-            border-radius: 100px;
-            margin-bottom: 16px;
-        }
-
-        h2 {
-            font-size: 1.75rem;
-            font-weight: 700;
-            color: var(--gray-900);
-            margin-bottom: 12px;
-            letter-spacing: -0.01em;
-        }
-
-        h3 {
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: var(--gray-900);
-            margin-bottom: 8px;
-            margin-top: 32px;
-        }
-
-        h3:first-of-type { margin-top: 24px; }
-
-        p { margin-bottom: 16px; color: var(--gray-700); }
-
-        /* ─── INSTALL STEPS ─────────────────────────────── */
-        .steps {
-            display: grid;
-            gap: 20px;
-            margin-top: 24px;
-        }
-
-        .step {
-            display: flex;
-            gap: 16px;
-            background: var(--white);
-            border: 1px solid var(--gray-200);
-            border-radius: 12px;
-            padding: 20px;
-            transition: box-shadow 0.2s;
-        }
-
-        .step:hover {
-            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
-        }
-
-        .step-num {
-            flex-shrink: 0;
-            width: 36px;
-            height: 36px;
-            background: var(--green-600);
-            color: var(--white);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 15px;
-        }
-
-        .step-content h4 {
-            font-size: 15px;
-            font-weight: 600;
-            color: var(--gray-900);
-            margin-bottom: 4px;
-        }
-
-        .step-content p {
-            font-size: 14px;
-            margin-bottom: 8px;
-        }
-
-        .step-content a {
-            color: var(--green-600);
-            font-weight: 500;
-        }
-
-        .step-content a:hover { text-decoration: none; }
-
-        /* ─── FEATURE CARDS ─────────────────────────────── */
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 16px;
-            margin-top: 24px;
-        }
-
-        .feature-card {
-            background: var(--white);
-            border: 1px solid var(--gray-200);
-            border-radius: 12px;
-            padding: 24px;
-            transition: all 0.2s;
-        }
-
-        .feature-card:hover {
-            border-color: var(--green-300);
-            box-shadow: 0 4px 16px rgba(46,125,50,0.08);
-        }
-
-        .feature-icon {
-            font-size: 28px;
-            margin-bottom: 12px;
-        }
-
-        .feature-card h4 {
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--gray-900);
-            margin-bottom: 8px;
-        }
-
-        .feature-card p {
-            font-size: 14px;
-            color: var(--gray-600);
-            margin-bottom: 0;
-        }
-
-        /* ─── TABLES ──────────────────────────────────────── */
-        .info-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            margin-top: 16px;
-            background: var(--white);
-            border: 1px solid var(--gray-200);
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        .info-table th {
-            background: var(--gray-100);
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            color: var(--gray-600);
-            padding: 10px 16px;
-            text-align: left;
-        }
-
-        .info-table td {
-            padding: 10px 16px;
-            font-size: 14px;
-            border-top: 1px solid var(--gray-100);
-        }
-
-        /* ─── CODE BLOCKS ───────────────────────────────── */
-        pre {
-            background: var(--gray-900);
-            color: var(--green-300);
-            padding: 16px 20px;
-            border-radius: 10px;
-            overflow-x: auto;
-            font-family: var(--font-mono);
-            font-size: 13px;
-            line-height: 1.6;
-            margin: 16px 0;
-        }
-
-        code {
-            font-family: var(--font-mono);
-            font-size: 0.9em;
-            background: var(--gray-100);
-            padding: 2px 6px;
-            border-radius: 4px;
-            color: var(--green-800);
-        }
-
-        pre code {
-            background: none;
-            padding: 0;
-            color: inherit;
-        }
-
-        /* ─── CHANGELOG ─────────────────────────────────── */
-        .changelog-entry {
-            background: var(--white);
-            border: 1px solid var(--gray-200);
-            border-radius: 12px;
-            padding: 24px;
-            margin-top: 16px;
-        }
-
-        .changelog-version {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 18px;
-            font-weight: 700;
-            color: var(--green-700);
-            margin-bottom: 12px;
-        }
-
-        .changelog-tag {
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            background: var(--green-100);
-            color: var(--green-800);
-            padding: 2px 8px;
-            border-radius: 4px;
-        }
-
-        .changelog-tag.fix { background: #fef3c7; color: #92400e; }
-        .changelog-tag.new { background: #dbeafe; color: #1e40af; }
-
-        .changelog-list {
-            list-style: none;
-            padding: 0;
-        }
-
-        .changelog-list li {
-            padding: 6px 0;
-            font-size: 14px;
-            color: var(--gray-700);
-            display: flex;
-            gap: 8px;
-            align-items: baseline;
-        }
-
-        .changelog-list li::before {
-            content: '';
-            flex-shrink: 0;
-            width: 6px;
-            height: 6px;
-            background: var(--green-400);
-            border-radius: 50%;
-            margin-top: 7px;
-        }
-
-        /* ─── FOOTER ────────────────────────────────────── */
-        footer {
-            background: var(--gray-900);
-            color: var(--gray-400);
-            padding: 40px 24px;
-            text-align: center;
-            font-size: 14px;
-        }
-
-        footer a {
-            color: var(--green-400);
-            text-decoration: none;
-        }
-
-        footer a:hover { text-decoration: underline; }
-
-        .footer-badges {
-            display: flex;
-            justify-content: center;
-            gap: 8px;
-            margin-top: 16px;
-            flex-wrap: wrap;
-        }
-
-        .footer-badges img {
-            height: 22px;
-        }
-
-        /* ─── RESPONSIVE ────────────────────────────────── */
-        @media (max-width: 640px) {
-            .hero { padding: 48px 20px 40px; }
-            .toolbar-mock { font-size: 11px; gap: 4px; padding: 8px 10px; }
-            .features-grid { grid-template-columns: 1fr; }
-            .hero-actions { flex-direction: column; }
-            .btn { justify-content: center; }
-        }
+        :root{--green-900:#1a3a1c;--green-800:#1b5e20;--green-700:#2e7d32;--green-600:#388e3c;--green-500:#43a047;--green-400:#66bb6a;--green-300:#81c784;--green-200:#a5d6a7;--green-100:#c8e6c9;--green-50:#e8f5e9;--gray-900:#111827;--gray-800:#1f2937;--gray-700:#374151;--gray-600:#4b5563;--gray-500:#6b7280;--gray-400:#9ca3af;--gray-300:#d1d5db;--gray-200:#e5e7eb;--gray-100:#f3f4f6;--gray-50:#f9fafb;--white:#fff;--danger:#ef5350;--font-body:'DM Sans',sans-serif;--font-mono:'JetBrains Mono',monospace}
+        *{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+        body{font-family:var(--font-body);background:var(--gray-50);color:var(--gray-800);line-height:1.65;-webkit-font-smoothing:antialiased}
+        .hero{background:linear-gradient(135deg,var(--green-900) 0%,var(--green-700) 50%,var(--green-600) 100%);color:var(--white);padding:80px 24px 60px;position:relative;overflow:hidden}
+        .hero::before{content:'';position:absolute;top:-50%;right:-20%;width:600px;height:600px;background:radial-gradient(circle,rgba(255,255,255,.06) 0%,transparent 70%);border-radius:50%}
+        .hero-inner{max-width:880px;margin:0 auto;position:relative;z-index:1}
+        .hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:100px;padding:6px 16px;font-size:13px;font-weight:500;margin-bottom:24px;backdrop-filter:blur(4px)}
+        .hero-badge .dot{width:8px;height:8px;background:var(--green-400);border-radius:50%;animation:pulse 2s infinite}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+        .hero h1{font-size:clamp(2.2rem,5vw,3.2rem);font-weight:700;line-height:1.15;margin-bottom:16px;letter-spacing:-.02em}
+        .hero h1 span{background:linear-gradient(90deg,var(--green-200),var(--green-100));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+        .hero p.subtitle{font-size:1.15rem;color:var(--green-200);max-width:600px;margin-bottom:32px;line-height:1.6}
+        .hero-actions{display:flex;gap:12px;flex-wrap:wrap}
+        .btn{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:8px;font-family:var(--font-body);font-size:15px;font-weight:600;text-decoration:none;transition:all .2s;cursor:pointer;border:none}
+        .btn-primary{background:var(--white);color:var(--green-800);box-shadow:0 2px 8px rgba(0,0,0,.15)}
+        .btn-primary:hover{background:var(--green-50);transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.2)}
+        .btn-secondary{background:rgba(255,255,255,.12);color:var(--white);border:1px solid rgba(255,255,255,.25)}
+        .btn-secondary:hover{background:rgba(255,255,255,.2)}
+        .toolbar-preview{max-width:880px;margin:-24px auto 0;padding:0 24px;position:relative;z-index:2}
+        .toolbar-mock{background:var(--green-700);border-radius:10px;padding:10px 16px;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--white);box-shadow:0 8px 32px rgba(0,0,0,.2);overflow-x:auto;flex-wrap:nowrap}
+        .toolbar-mock .title{font-weight:700;white-space:nowrap;padding-right:10px;border-right:1px solid rgba(255,255,255,.25);margin-right:4px}
+        .toolbar-mock .mock-btn{background:var(--green-600);padding:5px 12px;border-radius:4px;white-space:nowrap;font-size:12px;font-weight:500}
+        .toolbar-mock .mock-badge{font-size:11px;color:#80cbc4;border:1px solid rgba(255,255,255,.25);padding:3px 8px;border-radius:3px;white-space:nowrap}
+        .toolbar-mock .mock-dtag{background:var(--green-600);font-size:11px;padding:3px 8px;border-radius:3px;white-space:nowrap}
+        .toolbar-mock .spacer{flex:1}
+        .toolbar-mock .mock-info,.toolbar-mock .mock-close{width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:4px;font-size:14px}
+        .toolbar-mock .mock-info{background:rgba(255,255,255,.1)}
+        .toolbar-mock .mock-close{background:var(--danger);font-weight:700;font-size:13px}
+        .toolbar-caption{text-align:center;font-size:13px;color:var(--gray-500);margin-top:12px}
+        .container{max-width:880px;margin:0 auto;padding:0 24px}
+        section{padding:64px 0}section+section{border-top:1px solid var(--gray-200)}
+        .section-label{display:inline-block;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--green-600);background:var(--green-50);padding:4px 12px;border-radius:100px;margin-bottom:16px}
+        h2{font-size:1.75rem;font-weight:700;color:var(--gray-900);margin-bottom:12px}
+        h3{font-size:1.2rem;font-weight:600;color:var(--gray-900);margin-bottom:8px;margin-top:32px}h3:first-of-type{margin-top:24px}
+        p{margin-bottom:16px;color:var(--gray-700)}
+        .steps{display:grid;gap:20px;margin-top:24px}
+        .step{display:flex;gap:16px;background:var(--white);border:1px solid var(--gray-200);border-radius:12px;padding:20px;transition:box-shadow .2s}
+        .step:hover{box-shadow:0 4px 16px rgba(0,0,0,.06)}
+        .step-num{flex-shrink:0;width:36px;height:36px;background:var(--green-600);color:var(--white);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px}
+        .step-content h4{font-size:15px;font-weight:600;color:var(--gray-900);margin-bottom:4px}
+        .step-content p{font-size:14px;margin-bottom:8px}
+        .step-content a{color:var(--green-600);font-weight:500}.step-content a:hover{text-decoration:none}
+        .features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:24px}
+        .feature-card{background:var(--white);border:1px solid var(--gray-200);border-radius:12px;padding:24px;transition:all .2s}
+        .feature-card:hover{border-color:var(--green-300);box-shadow:0 4px 16px rgba(46,125,50,.08)}
+        .feature-icon{font-size:28px;margin-bottom:12px}
+        .feature-card h4{font-size:16px;font-weight:600;color:var(--gray-900);margin-bottom:8px}
+        .feature-card p{font-size:14px;color:var(--gray-600);margin-bottom:0}
+        .info-table{width:100%;border-collapse:separate;border-spacing:0;margin-top:16px;background:var(--white);border:1px solid var(--gray-200);border-radius:10px;overflow:hidden}
+        .info-table th{background:var(--gray-100);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-600);padding:10px 16px;text-align:left}
+        .info-table td{padding:10px 16px;font-size:14px;border-top:1px solid var(--gray-100)}
+        code{font-family:var(--font-mono);font-size:.9em;background:var(--gray-100);padding:2px 6px;border-radius:4px;color:var(--green-800)}
+        .changelog-entry{background:var(--white);border:1px solid var(--gray-200);border-radius:12px;padding:24px;margin-top:16px}
+        .changelog-version{display:inline-flex;align-items:center;gap:8px;font-size:18px;font-weight:700;color:var(--green-700);margin-bottom:12px}
+        .changelog-tag{font-size:11px;font-weight:600;text-transform:uppercase;background:var(--green-100);color:var(--green-800);padding:2px 8px;border-radius:4px}
+        .changelog-tag.fix{background:#fef3c7;color:#92400e}.changelog-tag.new{background:#dbeafe;color:#1e40af}
+        .changelog-list{list-style:none;padding:0}
+        .changelog-list li{padding:6px 0;font-size:14px;color:var(--gray-700);display:flex;gap:8px;align-items:baseline}
+        .changelog-list li::before{content:'';flex-shrink:0;width:6px;height:6px;background:var(--green-400);border-radius:50%;margin-top:7px}
+        footer{background:var(--gray-900);color:var(--gray-400);padding:40px 24px;text-align:center;font-size:14px}
+        footer a{color:var(--green-400);text-decoration:none}footer a:hover{text-decoration:underline}
+        .footer-badges{display:flex;justify-content:center;gap:8px;margin-top:16px;flex-wrap:wrap}.footer-badges img{height:22px}
+        @media(max-width:640px){.hero{padding:48px 20px 40px}.toolbar-mock{font-size:11px;gap:4px;padding:8px 10px}.features-grid{grid-template-columns:1fr}.hero-actions{flex-direction:column}.btn{justify-content:center}}
     </style>
 </head>
 <body>
-
-    <!-- ─── HERO ──────────────────────────────────────── -->
     <header class="hero">
         <div class="hero-inner">
-            <div class="hero-badge">
-                <span class="dot"></span>
-                v0.05 beta — Ultimo aggiornamento: Marzo 2026
-            </div>
+            <div class="hero-badge"><span class="dot"></span> v0.06 beta — Ultimo aggiornamento: Marzo 2026</div>
             <h1>🧳 Cassetto_Utility<br><span>Toolbox per il Cassetto Fiscale</span></h1>
-            <p class="subtitle">
-                Userscript per Tampermonkey/Greasemonkey che aggiunge una barra degli strumenti al Cassetto Fiscale dell'Agenzia delle Entrate con download massivo F24/F23 e Report Excel.
-            </p>
+            <p class="subtitle">Userscript per Tampermonkey/Greasemonkey che aggiunge una barra degli strumenti al Cassetto Fiscale dell'Agenzia delle Entrate con download massivo F24/F23/CU e Report Excel.</p>
             <div class="hero-actions">
-                <a href="https://raw.githubusercontent.com/denvermotel/Cassetto_Utility/refs/heads/main/Cassetto_Utility.user.js" class="btn btn-primary">
-                    ➤ Installa Cassetto_Utility
-                </a>
-                <a href="https://github.com/denvermotel/Cassetto_Utility" class="btn btn-secondary" target="_blank" rel="noopener">
-                    GitHub Repository
-                </a>
+                <a href="https://raw.githubusercontent.com/denvermotel/Cassetto_Utility/refs/heads/main/Cassetto_Utility.user.js" class="btn btn-primary">➤ Installa Cassetto_Utility</a>
+                <a href="https://github.com/denvermotel/Cassetto_Utility" class="btn btn-secondary" target="_blank" rel="noopener">GitHub Repository</a>
             </div>
         </div>
     </header>
-
-    <!-- ─── TOOLBAR PREVIEW ───────────────────────────── -->
     <div class="toolbar-preview">
         <div class="toolbar-mock">
-            <span class="title">🧳 Cassetto_Utility v0.05β</span>
+            <span class="title">🧳 Cassetto_Utility v0.06β</span>
             <span class="mock-badge">🏢 09876543210</span>
             <span class="mock-dtag">F24</span>
             <span class="mock-btn">🧳⬇ Scarica F24</span>
-            <span class="mock-btn">📋 Protocolli</span>
             <span class="mock-btn">📊 Report Excel</span>
+            <span class="mock-btn">🔍 Riepilogo</span>
+            <span class="mock-btn">📅 Selettore Date</span>
+            <span class="spacer"></span>
+            <span class="mock-info">ℹ️</span>
+            <span class="mock-close">✕</span>
+        </div>
+        <p class="toolbar-caption">Anteprima della barra sulla pagina Ricerche tributi F24</p>
+    </div>
+
+    <div class="toolbar-preview" style="margin-top:8px">
+        <div class="toolbar-mock">
+            <span class="title">🧳 Cassetto_Utility v0.06β</span>
+            <span class="mock-badge">🏢 09876543210</span>
+            <span class="mock-dtag">CU</span>
+            <span class="mock-btn">🧳⬇ Scarica CU</span>
+            <span class="mock-btn">📊 Report Excel CU</span>
             <span class="mock-btn">🔍 Riepilogo</span>
             <span class="spacer"></span>
             <span class="mock-info">ℹ️</span>
             <span class="mock-close">✕</span>
         </div>
-        <p class="toolbar-caption">Anteprima della barra degli strumenti sulla pagina lista F24</p>
+        <p class="toolbar-caption">Anteprima della barra sulla pagina lista CU ricevute</p>
     </div>
 
-    <!-- ─── INSTALLAZIONE ─────────────────────────────── -->
     <section id="installazione">
         <div class="container">
             <span class="section-label">Guida rapida</span>
             <h2>Installazione</h2>
             <p>Richiede un'estensione per userscript nel browser. L'installazione richiede meno di 2 minuti.</p>
-
             <div class="steps">
-                <div class="step">
-                    <div class="step-num">1</div>
-                    <div class="step-content">
-                        <h4>Installa l'estensione del browser</h4>
-                        <p>Scegli l'estensione per il tuo browser:</p>
-                        <p>
-                            <a href="https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo" target="_blank">Tampermonkey per Chrome/Edge</a> ·
-                            <a href="https://addons.mozilla.org/it/firefox/addon/tampermonkey/" target="_blank">Tampermonkey per Firefox</a> ·
-                            <a href="https://addons.mozilla.org/it/firefox/addon/greasemonkey/" target="_blank">Greasemonkey per Firefox</a>
-                        </p>
-                    </div>
-                </div>
-
-                <div class="step">
-                    <div class="step-num">2</div>
-                    <div class="step-content">
-                        <h4>Installa lo userscript</h4>
-                        <p>Clicca il pulsante qui sotto — Tampermonkey aprirà automaticamente la finestra di conferma:</p>
-                        <p>
-                            <a href="https://raw.githubusercontent.com/denvermotel/Cassetto_Utility/refs/heads/main/Cassetto_Utility.user.js" class="btn btn-primary" style="display:inline-flex;font-size:14px;padding:10px 20px;">
-                                ➤ Installa Cassetto_Utility.user.js
-                            </a>
-                        </p>
-                    </div>
-                </div>
-
-                <div class="step">
-                    <div class="step-num">3</div>
-                    <div class="step-content">
-                        <h4>Accedi al Cassetto Fiscale</h4>
-                        <p>Vai su <a href="https://cassetto.agenziaentrate.gov.it" target="_blank">cassetto.agenziaentrate.gov.it</a>, naviga in <strong>Versamenti → Modello F24</strong> oppure <strong>Versamenti → Modello F23</strong>, seleziona l'anno — la barra verde apparirà automaticamente in cima alla pagina.</p>
-                    </div>
-                </div>
+                <div class="step"><div class="step-num">1</div><div class="step-content"><h4>Installa l'estensione del browser</h4><p><a href="https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo" target="_blank">Tampermonkey per Chrome/Edge</a> · <a href="https://addons.mozilla.org/it/firefox/addon/tampermonkey/" target="_blank">Tampermonkey per Firefox</a> · <a href="https://addons.mozilla.org/it/firefox/addon/greasemonkey/" target="_blank">Greasemonkey per Firefox</a></p></div></div>
+                <div class="step"><div class="step-num">2</div><div class="step-content"><h4>Installa lo userscript</h4><p>Clicca il pulsante — Tampermonkey aprirà la finestra di conferma:</p><p><a href="https://raw.githubusercontent.com/denvermotel/Cassetto_Utility/refs/heads/main/Cassetto_Utility.user.js" class="btn btn-primary" style="display:inline-flex;font-size:14px;padding:10px 20px;">➤ Installa Cassetto_Utility.user.js</a></p></div></div>
+                <div class="step"><div class="step-num">3</div><div class="step-content"><h4>Accedi al Cassetto Fiscale</h4><p>Vai su <a href="https://cassetto.agenziaentrate.gov.it" target="_blank">cassetto.agenziaentrate.gov.it</a> e naviga nella sezione desiderata. La barra apparirà automaticamente.</p></div></div>
             </div>
-
-            <p style="margin-top:20px;font-size:14px;color:var(--gray-600);">
-                ⚠️ Consenti sempre i download multipli quando il browser lo chiede per <code>agenziaentrate.gov.it</code>.
-            </p>
+            <p style="margin-top:20px;font-size:14px;color:var(--gray-600);">⚠️ Consenti sempre i download multipli quando il browser lo chiede per <code>agenziaentrate.gov.it</code>.</p>
         </div>
     </section>
 
-    <!-- ─── FUNZIONALITÀ ──────────────────────────────── -->
     <section id="funzionalita">
         <div class="container">
             <span class="section-label">Cosa fa</span>
             <h2>Funzionalità</h2>
             <p>Tutto avviene client-side — nessun dato viene inviato a server esterni.</p>
-
             <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">🧳⬇</div>
-                    <h4>Scarica F24</h4>
-                    <p>Download massivo delle quietanze PDF (o Copia F24 come fallback) per tutti i versamenti dell'anno selezionato. Registra i risultati per il Report Excel.</p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">🧳⬇</div>
-                    <h4>Scarica F23</h4>
-                    <p>Download massivo delle copie PDF dei modelli F23. Nessuna quietanza disponibile per F23 — solo copia del modello.</p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">📊</div>
-                    <h4>Report Excel</h4>
-                    <p>Genera un file <code>.xls</code> con Riepilogo + Dettaglio. Post-download mostra il raffronto tra lista sito e file scaricati: ✅ scaricato · ❌ errore · ⏳ non scaricato.</p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">📋</div>
-                    <h4>Protocolli F24</h4>
-                    <p>Copia negli appunti data + numero di protocollo di tutti i versamenti F24 visibili nella pagina.</p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">🔍</div>
-                    <h4>Riepilogo</h4>
-                    <p>Toggle rapido: mostra o nasconde nella barra i conteggi di versamenti trovati, quietanze disponibili e file scaricati.</p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">🔄</div>
-                    <h4>Navigazione dinamica</h4>
-                    <p>La barra rileva automaticamente i cambi di pagina e aggiorna i pulsanti al contesto corrente. Dalla pagina Versamenti (<code>Ric=VERS</code>), pulsanti diretti per raggiungere Modello F24 o F23. Non serve mai ricaricare la pagina.</p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">👥</div>
-                    <h4>Cassetto delegato</h4>
-                    <p>Rilevamento automatico dell'identificativo: PIVA del soggetto delegato, PIVA propria (11 cifre), o Codice Fiscale (16 caratteri) con cascata di priorità.</p>
-                </div>
+                <div class="feature-card"><div class="feature-icon">🧳⬇</div><h4>Scarica F24</h4><p>Download massivo delle quietanze PDF (o Copia F24 come fallback) per tutti i versamenti dell'anno selezionato.</p></div>
+                <div class="feature-card"><div class="feature-icon">🧳⬇</div><h4>Scarica F23</h4><p>Download massivo delle copie PDF dei modelli F23. Solo copia del modello.</p></div>
+                <div class="feature-card"><div class="feature-icon">🧳⬇</div><h4>Scarica CU</h4><p>Download massivo PDF di tutte le CU ricevute. Alert di conferma se le CU superano 15 (procedura non interrompibile).</p></div>
+                <div class="feature-card"><div class="feature-icon">📊</div><h4>Report Excel CU</h4><p>File <code>.xls</code> con elenco + riepilogo. Include denominazione sostituto (da Quadro DA) e importi dal Quadro AU.</p></div>
+                <div class="feature-card"><div class="feature-icon">📊</div><h4>Report Excel F24/F23</h4><p>File <code>.xls</code> con Elenco (dettaglio) + Riepilogo e raffronto ✅ scaricato · ❌ errore · ⏳ non scaricato.</p></div>
+                <div class="feature-card"><div class="feature-icon">📅</div><h4>Ricerche tributi F24</h4><p>Selettore date (Anno/Trimestre/Mese) nel tab "Ricerca per data versamento". Download e Report Excel dai risultati.</p></div>
+                <div class="feature-card"><div class="feature-icon">🔄</div><h4>Navigazione dinamica</h4><p>La barra rileva i cambi di pagina e aggiorna i pulsanti. Dalle pagine generiche: link rapidi "Vai a CU" e "Vai a Versamenti".</p></div>
+                <div class="feature-card"><div class="feature-icon">📋</div><h4>Protocolli F24</h4><p>Copia negli appunti data + numero di protocollo di tutti i versamenti F24.</p></div>
+                <div class="feature-card"><div class="feature-icon">👥</div><h4>Cassetto delegato</h4><p>Rilevamento automatico: PIVA delegato, PIVA propria (11 cifre) o CF (16 caratteri) con cascata di priorità.</p></div>
             </div>
 
             <h3>Pulsanti per contesto</h3>
             <table class="info-table">
-                <thead>
-                    <tr><th>Pulsante</th><th>Contesto</th><th>Descrizione</th></tr>
-                </thead>
+                <thead><tr><th>Pulsante</th><th>Contesto</th><th>Descrizione</th></tr></thead>
                 <tbody>
-                    <tr><td>🧳⬇ <strong>Scarica F24</strong></td><td>Lista F24</td><td>Quietanza PDF o Copia F24 (fallback)</td></tr>
-                    <tr><td>🧳⬇ <strong>Scarica F23</strong></td><td>Lista F23</td><td>Copia PDF del modello F23</td></tr>
+                    <tr><td>🧳⬇ <strong>Scarica CU</strong></td><td>Lista CU</td><td>Download massivo PDF CU via POST (alert se &gt; 15)</td></tr>
+                    <tr><td>📊 <strong>Report Excel CU</strong></td><td>Lista CU</td><td><code>.xls</code> con denominazione sostituto + importi da Quadro AU</td></tr>
+                    <tr><td>🧳⬇ <strong>Genera PDF CU</strong></td><td>Dettaglio CU</td><td>Download PDF singola CU</td></tr>
+                    <tr><td>🧳⬇ <strong>Scarica F24</strong></td><td>Lista F24 / Ricerca F24</td><td>Quietanza PDF o Copia F24</td></tr>
+                    <tr><td>🧳⬇ <strong>Scarica F23</strong></td><td>Lista F23</td><td>Copia PDF modello F23</td></tr>
+                    <tr><td>📊 <strong>Report Excel</strong></td><td>Lista F24/F23 / Ricerca F24</td><td><code>.xls</code> con Elenco + Riepilogo</td></tr>
+                    <tr><td>📅 <strong>Selettore Date</strong></td><td>Ricerche tributi F24</td><td>Anno/Trimestre/Mese → compila Dal/Al</td></tr>
                     <tr><td>📋 <strong>Protocolli</strong></td><td>Lista F24</td><td>Copia data + protocollo in clipboard</td></tr>
-                    <tr><td>📊 <strong>Report Excel</strong></td><td>Lista F24/F23</td><td><code>.xls</code> con Riepilogo + Dettaglio</td></tr>
-                    <tr><td>🧳⬇ <strong>Copia F24</strong></td><td>Dettaglio F24</td><td>Scarica PDF copia modello F24</td></tr>
-                    <tr><td>🧳⬇ <strong>Quietanza</strong></td><td>Dettaglio F24</td><td>Scarica quietanza AdE (fallback: nuova scheda)</td></tr>
-                    <tr><td>🧳⬇ <strong>Copia F23</strong></td><td>Dettaglio F23</td><td>Scarica PDF copia modello F23</td></tr>
+                    <tr><td>📄 <strong>Vai a CU</strong> / ⚠ <strong>Vai a Versamenti</strong></td><td>Pagine generiche</td><td>Link di navigazione rapida</td></tr>
                 </tbody>
             </table>
-
-            <h3>Differenze F24 vs F23</h3>
-            <table class="info-table">
-                <thead>
-                    <tr><th>Caratteristica</th><th>F24</th><th>F23</th></tr>
-                </thead>
-                <tbody>
-                    <tr><td>Quietanza disponibile</td><td>✅ Sì (dal 01/10/2006)</td><td>❌ No — solo copia PDF</td></tr>
-                    <tr><td>Protocollo in lista</td><td>✅ Visibile in tabella</td><td>❌ Solo nel dettaglio</td></tr>
-                    <tr><td>Nomi file</td><td><code>…_QuietanzaF24_…</code> / <code>…_CopiaF24_…</code></td><td><code>…_CopiaF23_…</code></td></tr>
-                </tbody>
-            </table>
-
-            <h3>Formato nomi file</h3>
-            <pre><code>CODICE_ANNO_MESE_GIORNO_TipoDoc_idxN.pdf
-
-Esempi:
-09876543210_2025_03_15_QuietanzaF24_idx2.pdf   ← società delegata
-VRDLCU75T10F205Z_2024_11_30_CopiaF24_idx0.pdf  ← persona fisica CF
-03456789012_2023_04_27_CopiaF23_idx0.pdf        ← società PIVA
-09876543210_2025_ReportF24_CassettoUtility.xls  ← report Excel</code></pre>
         </div>
     </section>
 
-    <!-- ─── NOTE TECNICHE ─────────────────────────────── -->
     <section id="note-tecniche">
         <div class="container">
             <span class="section-label">Per sviluppatori</span>
             <h2>Note tecniche</h2>
-
             <h3>Privacy by design</h3>
-            <p>Tutte le elaborazioni avvengono esclusivamente client-side nel tuo browser. Nessun dato viene raccolto, salvato o trasmesso a server esterni. Lo script opera solo nel dominio <code>cassetto.agenziaentrate.gov.it</code>.</p>
-
+            <p>Tutte le elaborazioni avvengono esclusivamente client-side. Nessun dato viene trasmesso a server esterni. Lo script opera solo nel dominio <code>cassetto.agenziaentrate.gov.it</code>.</p>
             <h3>Dettagli implementativi</h3>
-            <p>Lo storage usa <code>GM_setValue</code>/<code>GM_getValue</code> (Tampermonkey) con fallback automatico su <code>localStorage</code>. Il monitoraggio URL (polling ogni 500ms) rileva la navigazione interna e ricostruisce i pulsanti della barra senza bisogno di ricaricare la pagina. La quietanza F24 è disponibile solo per versamenti successivi al 01/10/2006 tramite servizi telematici AdE. Il delay tra download è di 600 ms.</p>
+            <p>Il monitoraggio URL (polling 500ms) rileva la navigazione interna e ricostruisce la barra. Lo storage usa <code>GM_setValue</code>/<code>GM_getValue</code> con fallback <code>localStorage</code>. Il download PDF CU avviene via POST. La denominazione sostituto viene dal Quadro DA (DA001 002+003). Gli importi dal Quadro AU. I report Excel hanno Elenco (dettaglio) come primo foglio e Riepilogo come secondo. Delay: 600ms per F24/F23, 800ms per CU.</p>
         </div>
     </section>
 
-    <!-- ═══ CHANGELOG ═══ -->
     <section id="changelog">
         <div class="container">
             <span class="section-label">Cosa è cambiato?</span>
             <h2>📝 Changelog</h2>
-
             <div class="changelog-entry">
-                <div class="changelog-version">
-                    v0.05 beta
-                    <span class="changelog-tag">Latest</span>
-                </div>
+                <div class="changelog-version">v0.06 beta <span class="changelog-tag">Latest</span></div>
+                <ul class="changelog-list">
+                    <li><span class="changelog-tag new">NEW</span> Supporto CU ricevute (<code>Ric=CUK</code>): download massivo PDF, Report Excel con denominazione sostituto (da Quadro DA) e importi (da Quadro AU)</li>
+                    <li><span class="changelog-tag new">NEW</span> Ricerche tributi F24 (<code>Ric=F24Sel</code>): download, Report Excel, Selettore Date (Anno/Trimestre/Mese)</li>
+                    <li><span class="changelog-tag new">NEW</span> Pagine generiche: link navigazione "Vai a CU" + "Vai a Versamenti"</li>
+                    <li><span class="changelog-tag new">NEW</span> Alert conferma CU &gt; 15: avviso procedura non interrompibile</li>
+                    <li><span class="changelog-tag new">CHG</span> Excel: foglio 1 = Elenco (dettaglio), foglio 2 = Riepilogo per tutti i report</li>
+                </ul>
+            </div>
+            <div class="changelog-entry">
+                <div class="changelog-version">v0.05 beta</div>
                 <ul class="changelog-list">
                     <li><span class="changelog-tag new">NEW</span> Conversione da bookmarklet a userscript Tampermonkey/Greasemonkey</li>
-                    <li><span class="changelog-tag new">NEW</span> Monitoraggio URL dinamico: i pulsanti si aggiornano automaticamente alla navigazione tra le sezioni</li>
-                    <li><span class="changelog-tag new">NEW</span> Pagina Versamenti (<code>Ric=VERS</code>): pulsanti "Modello F24" e "Modello F23" per navigazione diretta</li>
-                    <li><span class="changelog-tag new">NEW</span> Storage persistente (<code>GM_setValue</code>/<code>GM_getValue</code>) per log download tra sessioni</li>
-                    <li><span class="changelog-tag new">NEW</span> Tab riapertura barra dopo chiusura con ✕</li>
-                    <li><span class="changelog-tag new">NEW</span> Link istruzioni (ℹ️) nella barra</li>
-                    <li><span class="changelog-tag new">NEW</span> Grafica barra omogenea con FE-Utility</li>
-                    <li><span class="changelog-tag new">NEW</span> Licenza GPL-3.0 allineata a FE-Utility</li>
-                    <li><span class="changelog-tag new">NEW</span> Pagina GitHub Pages con istruzioni e changelog</li>
-                    <li><span class="changelog-tag new">NEW</span> Anti-doppio avvio con toggle visibilità pannello</li>
-                    <li><span class="changelog-tag new">NEW</span> Padding dinamico del body calcolato sull'altezza reale della barra</li>
+                    <li><span class="changelog-tag new">NEW</span> Monitoraggio URL dinamico, pagina Versamenti, storage persistente</li>
+                    <li><span class="changelog-tag new">NEW</span> Grafica omogenea con FE-Utility, licenza GPL-3.0</li>
                 </ul>
             </div>
-
             <div class="changelog-entry">
-                <div class="changelog-version">v0.04 beta</div>
+                <div class="changelog-version">v0.01 – v0.04 beta</div>
                 <ul class="changelog-list">
-                    <li><span class="changelog-tag new">NEW</span> Supporto completo Modello F23: lista, dettaglio, download, Report Excel</li>
-                    <li><span class="changelog-tag new">NEW</span> Rilevamento identificativo universale: PIVA, CF, PIVA delegato — con cascata di priorità</li>
-                    <li><span class="changelog-tag new">NEW</span> Badge differenziato: 👥 delegato / 🏢 PIVA / 👤 CF</li>
-                    <li><span class="changelog-tag new">NEW</span> Etichetta tipo documento (F24/F23) visibile in barra</li>
-                    <li><span class="changelog-tag fix">FIX</span> Report Excel — colonna Protocollo solo per F24</li>
-                </ul>
-            </div>
-
-            <div class="changelog-entry">
-                <div class="changelog-version">v0.03 beta</div>
-                <ul class="changelog-list">
-                    <li><span class="changelog-tag new">NEW</span> Supporto cassetto delegato</li>
-                    <li><span class="changelog-tag new">NEW</span> Report Excel con raffronto lista sito vs scaricati</li>
-                    <li><span class="changelog-tag new">NEW</span> Log di sessione</li>
-                </ul>
-            </div>
-
-            <div class="changelog-entry">
-                <div class="changelog-version">v0.02 beta</div>
-                <ul class="changelog-list">
-                    <li><span class="changelog-tag new">NEW</span> Rinominato Cassetto_Utility</li>
-                    <li><span class="changelog-tag new">NEW</span> Nomi file PIVA+data</li>
-                    <li><span class="changelog-tag new">NEW</span> Toggle Riepilogo</li>
-                </ul>
-            </div>
-
-            <div class="changelog-entry">
-                <div class="changelog-version">v0.01 beta</div>
-                <ul class="changelog-list">
-                    <li>Prima release: barra fissa, batch download F24, fallback copia, toggle bookmarklet</li>
+                    <li>Prima release, F24/F23, cassetto delegato, Report Excel, PIVA/CF</li>
                 </ul>
             </div>
         </div>
     </section>
 
-    <!-- ─── FOOTER ────────────────────────────────────── -->
     <footer>
         <div class="container">
-            <p>
-                <strong>Cassetto_Utility</strong> è un progetto open source distribuito sotto licenza <a href="https://www.gnu.org/licenses/gpl-3.0" target="_blank">GPL v3</a>.
-            </p>
-            <p style="margin-top:8px;font-size:13px;color:var(--gray-500);">
-                Il software è fornito "così com'è", senza garanzie. L'utente è l'unico responsabile dell'uso che ne viene fatto.
-            </p>
+            <p><strong>Cassetto_Utility</strong> è un progetto open source distribuito sotto licenza <a href="https://www.gnu.org/licenses/gpl-3.0" target="_blank">GPL v3</a>.</p>
+            <p style="margin-top:8px;font-size:13px;color:var(--gray-500);">Il software è fornito "così com'è", senza garanzie. L'utente è l'unico responsabile dell'uso che ne viene fatto.</p>
             <div class="footer-badges">
-                <img src="https://img.shields.io/badge/versione-0.05%20beta-green" alt="Versione">
+                <img src="https://img.shields.io/badge/versione-0.06%20beta-green" alt="Versione">
                 <img src="https://img.shields.io/badge/licenza-GPL%20v3-blue" alt="Licenza">
                 <img src="https://img.shields.io/badge/Tampermonkey-compatibile-brightgreen" alt="Tampermonkey">
                 <img src="https://img.shields.io/badge/Greasemonkey-compatibile-orange" alt="Greasemonkey">
             </div>
-            <p style="margin-top:20px;font-size:12px;">
-                <a href="https://github.com/denvermotel/Cassetto_Utility">Codice sorgente</a> ·
-                <a href="https://github.com/denvermotel/Cassetto_Utility/issues">Segnala un problema</a> ·
-                © 2026 denvermotel
-            </p>
+            <p style="margin-top:20px;font-size:12px;"><a href="https://github.com/denvermotel/Cassetto_Utility">Codice sorgente</a> · <a href="https://github.com/denvermotel/Cassetto_Utility/issues">Segnala un problema</a> · © 2026 denvermotel</p>
         </div>
     </footer>
-
 </body>
 </html>
