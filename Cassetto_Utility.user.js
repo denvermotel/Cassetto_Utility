@@ -3,7 +3,7 @@
 // @namespace      https://denvermotel.github.io/Cassetto_Utility/
 // @downloadURL    https://raw.githubusercontent.com/denvermotel/Cassetto_Utility/refs/heads/main/Cassetto_Utility.user.js
 // @updateURL      https://raw.githubusercontent.com/denvermotel/Cassetto_Utility/refs/heads/main/Cassetto_Utility.user.js
-// @version        0.06-beta
+// @version        0.07-beta
 // @description    Toolbox per cassetto.agenziaentrate.gov.it: download massivo F24/F23/CU, Report Excel, supporto cassetto proprio e delegato
 // @author         denvermotel
 // @match          https://cassetto.agenziaentrate.gov.it/*
@@ -20,18 +20,16 @@
 // ==/UserScript==
 
 /**
- * Cassetto_Utility - v0.06 beta
+ * Cassetto_Utility - v0.07 beta
  * Userscript per il portale cassetto.agenziaentrate.gov.it
  *
- * Changelog 0.06b (aggiornamento):
- *   - CHG: Excel F24/F23/CU: foglio 1 = Elenco (dettaglio), foglio 2 = Riepilogo
- *   - NEW: Excel CU — colonna "Denominazione Sostituto" da quadro DA (DA001 002 + 003)
- *   - NEW: Pagine generiche — link "Vai a CU" + "Vai a Versamenti"
- *   - NEW: Download CU > 15 — alert conferma prima dell'avvio
- *   - NEW: Ricerche tributi F24 (Ric=F24Sel) — download, report, selettore date
- *   - FIX: F24Sel dettaglio — solo Copia F24, niente quietanza
- *   - FIX: Download invisibile puro fetch+blob (niente tab aperte)
- *   - FIX: URL stampa F24 ricerca — costruita dai parametri essenziali
+ * Changelog 0.07b (aggiornamento):
+ *   - NEW: CU multi-tipo — supporto CU lavoro dipendente + autonomo + tutti i codici causale normativa
+ *   - NEW: CU multi-modulo — iterazione automatica su Modulo 1…N per CU con più moduli
+ *   - NEW: Report Excel CU — colonna "Tipo CU" e descrizione causale completa da tabella normativa
+ *   - NEW: Ricerca F24 — filtro per codice atto: input nella barra, pre-fetch dettaglio per filtrare
+ *   - NEW: Report Excel ricerca F24 — colonna "Codice Atto" estratta dal dettaglio versamento
+ *   - CHG: Download invisibile confermato fetch+blob su tutti i percorsi (nessuna tab aperta)
  */
 (function() {
 'use strict';
@@ -49,7 +47,7 @@ if (_win._CassettoUtility) {
 _win._CassettoUtility = true;
 
 /* ─── COSTANTI ───────────────────────────────────────────────── */
-var VERSION = '0.06\u03B2';
+var VERSION = '0.07\u03B2';
 var PANEL_ID = 'CU_Panel';
 var INSTRUCTIONS_URL = 'https://denvermotel.github.io/Cassetto_Utility/';
 var BASE_URL = window.location.origin;
@@ -146,6 +144,40 @@ function buildFilename(tipo, anno, dateStr, idx) {
     return safe(cod)+'_'+safe(yr)+'_'+safe(d.m)+'_'+safe(d.g)+'_'+safe(tipo)+'_idx'+safe(idx)+'.pdf';
 }
 
+/* ─── MAPPA CAUSALI CU (normativa) ──────────────────────────── */
+var CAUSALI_MAP = {
+'A':'Lavoro autonomo - arte o professione abituale',
+'B':'Utilizzazione economica opere ingegno/brevetti (autore)',
+'C':'Utili da contratti di associazione in partecipazione',
+'D':'Utili soci promotori/fondatori societ\u00e0 di capitali',
+'E':'Levata di protesti cambiari',
+'F':'Indennit\u00e0 giudici onorari di pace e vice procuratori',
+'G':'Indennit\u00e0 cessazione attivit\u00e0 sportiva professionale',
+'H':'Indennit\u00e0 cessazione rapporti di agenzia',
+'I':'Indennit\u00e0 cessazione funzioni notarili',
+'J':'Compensi raccoglitori occasionali di tartufi',
+'K':'Assegni di servizio civile universale',
+'L':'Utilizzazione economica opere ingegno/brevetti (gratuito)',
+'L1':'Utilizzazione economica opere ingegno/brevetti (oneroso)',
+'M':'Lavoro autonomo non esercitato abitualmente',
+'M1':'Obblighi di fare, non fare o permettere',
+'M2':'Lavoro autonomo non abituale con obbligo ENPAPI',
+'N':'Indennit\u00e0 trasferta, premi cori/bande/filodrammatiche',
+'O':'Lavoro autonomo non abituale con obbligo ENPALS',
+'O1':'Obblighi fare/non fare con obbligo ENPALS',
+'P':'Compensi soggetti non residenti per uso attrezzature',
+'Q':'Provvigioni agente/rappresentante monomandatario',
+'R':'Provvigioni agente/rappresentante plurimandatario',
+'S':'Provvigioni commissionario',
+'T':'Provvigioni mediatore',
+'U':'Provvigioni procacciatore di affari',
+'V':'Provvigioni incaricato vendite a domicilio',
+'V1':'Redditi attivit\u00e0 commerciali non abituali (provvigioni occasionali)',
+'V2':'Prestazioni non abituali incaricati vendita diretta',
+'W':'Corrispettivi contratti d\'appalto art.25-ter DPR 600/73',
+'ZO':'Titolo diverso dai precedenti'
+};
+
 /* ─── CSS ────────────────────────────────────────────────────── */
 var stile = document.createElement('style');
 stile.textContent =
@@ -171,7 +203,9 @@ stile.textContent =
 '#CU_AlertBox{background:#fff!important;border-radius:10px!important;padding:24px!important;max-width:440px!important;box-shadow:0 8px 32px rgba(0,0,0,.3)!important;font-family:Arial,sans-serif!important;font-size:14px!important;color:#333!important;text-align:center!important;}'+
 '#CU_AlertBox h3{margin:0 0 12px!important;font-size:16px!important;color:#e65100!important;}'+
 '#CU_AlertBox p{margin:0 0 16px!important;line-height:1.5!important;}'+
-'#CU_AlertBox button{padding:8px 20px!important;border:none!important;border-radius:5px!important;font-size:13px!important;font-weight:bold!important;cursor:pointer!important;margin:0 6px!important;}';
+'#CU_AlertBox button{padding:8px 20px!important;border:none!important;border-radius:5px!important;font-size:13px!important;font-weight:bold!important;cursor:pointer!important;margin:0 6px!important;}'+
+'#CU_AttoFilter{all:initial!important;display:inline-flex!important;align-items:center!important;gap:4px!important;font-family:Arial,sans-serif!important;font-size:11px!important;color:#e8f5e9!important;white-space:nowrap!important;flex-shrink:0!important;}'+
+'#CU_AttoInput{all:initial!important;display:inline-block!important;width:100px!important;padding:3px 6px!important;border:1px solid #43a047!important;border-radius:3px!important;background:#263238!important;color:#e8f5e9!important;font-family:Arial,sans-serif!important;font-size:11px!important;}';
 document.head.appendChild(stile);
 
 /* ─── BUILD PANEL (shell fissa) ──────────────────────────────── */
@@ -226,10 +260,11 @@ function rebuildButtons() {
             '<button class="cuBtn cu-purple" data-action="reportExcelCU">\uD83D\uDCCA Report Excel CU</button>'+
             '<button class="cuBtn cu-orange" data-action="summary">\uD83D\uDD0D Riepilogo</button>';
     } else if (isF24SearchRes) {
-        // Pagina risultati ricerca F24 — download + report + date selector (il form è in pagina)
+        // Pagina risultati ricerca F24 — download + report + filtro codice atto + date selector
         h = '<button class="cuBtn cu-green" data-action="downloadF24Sel">\uD83E\uDDC3\u2B07 Scarica F24</button>'+
             '<button class="cuBtn cu-purple" data-action="reportExcelSel">\uD83D\uDCCA Report Excel</button>'+
-            '<button class="cuBtn cu-orange" data-action="summarySel">\uD83D\uDD0D Riepilogo</button>';
+            '<button class="cuBtn cu-orange" data-action="summarySel">\uD83D\uDD0D Riepilogo</button>'+
+            '<span id="CU_AttoFilter"><span>\uD83C\uDFAF Cod.Atto:</span><input id="CU_AttoInput" type="text" placeholder="es. 55438..." title="Filtra download/report per codice atto (vuoto=tutti)"></span>';
         if (document.getElementById('tabf-1')) h += '<button class="cuBtn cu-blue" data-action="dateSelector">\uD83D\uDCC5 Selettore Date</button>';
     } else if (isF24Search) {
         // Pagina form ricerca F24 (senza risultati)
@@ -432,15 +467,43 @@ async function runBatch(rows) {
     storageSet('dlLog_'+getIdentifier().code+'_'+(getParam('Anno')||'ANNO'), dlLog);
 }
 
-/* Batch download F24 da ricerca
+/* Batch download F24 da ricerca — con filtro codice atto opzionale
    NOTA: l'URL per stampa=P deve essere costruito con solo i parametri essenziali
    (Ric=DetF24Sel, Anno, indice, stampa=P) — senza TIPORICERCAF24 e altri parametri
    extra che sono presenti nel link della lista ma NON nel link PDF del dettaglio.
 */
 async function runBatchF24Sel(rows) {
     if (!rows.length) { showSt('\u26A0\uFE0F Nessun versamento trovato.', 0); return; }
+    var filtroAtto = '';
+    var attoInput = document.getElementById('CU_AttoInput');
+    if (attoInput) filtroAtto = attoInput.value.trim();
+
     setDis(true); dlLog = [];
-    var ok_n = 0, fail_n = 0;
+    var ok_n = 0, fail_n = 0, skip_n = 0;
+
+    // Se c'è filtro atto, pre-fetch tutti i dettagli per estrarre il codice atto
+    if (filtroAtto) {
+        showSt('\uD83C\uDFAF Pre-lettura codici atto per filtrare\u2026', 5);
+        for (var p = 0; p < rows.length; p++) {
+            var ca = await fetchCodiceAtto(rows[p].detHref);
+            rows[p].codiceAtto = ca;
+            showSt('\uD83C\uDFAF Lettura codici atto ('+(p+1)+'/'+rows.length+')\u2026', Math.round(p/rows.length*30));
+            await sleep(300);
+        }
+        var filtrate = rows.filter(function(r) { return r.codiceAtto && r.codiceAtto.indexOf(filtroAtto) !== -1; });
+        if (!filtrate.length) {
+            showSt('\u26A0\uFE0F Nessun F24 con codice atto "'+filtroAtto+'" trovato (su '+rows.length+' risultati).', 0);
+            setDis(false); return;
+        }
+        var conferma = await showAlert(
+            '\uD83C\uDFAF Filtro Codice Atto',
+            'Trovati <b>' + filtrate.length + '</b> F24 con codice atto contenente "<b>' + esc(filtroAtto) + '</b>" su ' + rows.length + ' risultati totali.<br><br>Vuoi scaricare solo questi?',
+            'Scarica ' + filtrate.length, 'Annulla'
+        );
+        if (!conferma) { showSt('\u274C Download annullato.', 0); setTimeout(hideSt, 3000); setDis(false); return; }
+        rows = filtrate;
+    }
+
     for (var i = 0; i < rows.length; i++) {
         var row = rows[i];
         var anno = getParam('Anno', row.detHref) || row.annoRif || 'XXXX';
@@ -449,14 +512,18 @@ async function runBatchF24Sel(rows) {
         var dlUrl = SERVLET + '?Ric=DetF24Sel&Anno=' + encodeURIComponent(anno) + '&indice=' + encodeURIComponent(idx) + '&stampa=P';
         var tipo = 'CopiaF24';
         var fname = buildFilename(tipo, anno, row.date, idx);
-        showSt('\uD83E\uDDF3\u2B07 ('+(i+1)+'/'+rows.length+') '+fname, Math.round(i/rows.length*100));
+        showSt('\uD83E\uDDF3\u2B07 ('+(i+1)+'/'+rows.length+') '+fname, 30 + Math.round(i/rows.length*70));
         var ok = await dlPdf(dlUrl, fname);
-        dlLog.push({date:row.date, importo:row.importo, tributo:row.tributo||'', proto:'', docType:'F24', tipo:tipo, filename:fname, ok:ok});
+        dlLog.push({date:row.date, importo:row.importo, tributo:row.tributo||'', codiceAtto:row.codiceAtto||'', proto:'', docType:'F24', tipo:tipo, filename:fname, ok:ok});
         if (ok) ok_n++; else fail_n++;
         await sleep(600);
     }
     document.getElementById('CU_PFill').style.setProperty('width','100%','important');
-    showSt('\u2705 Completato: '+ok_n+' scaricati'+(fail_n>0?', \u26A0\uFE0F '+fail_n+' errori':'')+' \u2014 usa \uD83D\uDCCA Report Excel.', 100);
+    var msg = '\u2705 Completato: '+ok_n+' scaricati';
+    if (fail_n>0) msg += ', \u26A0\uFE0F '+fail_n+' errori';
+    if (filtroAtto) msg += ' (filtro atto: '+filtroAtto+')';
+    msg += ' \u2014 usa \uD83D\uDCCA Report Excel.';
+    showSt(msg, 100);
     setDis(false);
 }
 
@@ -531,25 +598,102 @@ function fetchDADenominazione(anno, protocollo) {
     }).catch(function() { return ''; });
 }
 
-/* Fetch importi dal Quadro AU */
-function fetchAUData(anno, protocollo) {
-    var url = SERVLET+'?Ric=CUK&Anno='+encodeURIComponent(anno)+'&Protocollo='+encodeURIComponent(protocollo)+'&Quadro=AU&Modulo=1';
+/* Fetch importi dal Quadro AU — singolo modulo */
+function fetchAUSingleModule(anno, protocollo, modulo) {
+    var url = SERVLET+'?Ric=CUK&Anno='+encodeURIComponent(anno)+'&Protocollo='+encodeURIComponent(protocollo)+'&Quadro=AU&Modulo='+modulo;
     return fetch(url, {credentials:'include'}).then(function(r){return r.text();}).then(function(html) {
         var doc = new DOMParser().parseFromString(html, 'text/html');
-        var result = {causale:'', ammontareLordo:'', imponibile:'', ritenute:''};
+        var result = {causale:'', ammontareLordo:'', imponibile:'', ritenute:'', hasData:false};
         doc.querySelectorAll('table.table tr').forEach(function(tr) {
             var tds = tr.querySelectorAll('td');
             if (tds.length >= 3) {
                 var campo = tds[1] ? tds[1].textContent.trim() : '';
                 var valore = tds[2] ? tds[2].textContent.trim() : '';
-                if (campo.indexOf('Causale') !== -1) result.causale = valore;
-                if (campo.indexOf('Ammontare lordo') !== -1) result.ammontareLordo = valore;
-                if (campo.indexOf('Imponibile') !== -1) result.imponibile = valore;
-                if (campo.indexOf('Ritenute') !== -1 && campo.indexOf('acconto') !== -1) result.ritenute = valore;
+                if (campo.indexOf('Causale') !== -1 && valore) { result.causale = valore; result.hasData = true; }
+                if (campo.indexOf('Ammontare lordo') !== -1 && valore) { result.ammontareLordo = valore; result.hasData = true; }
+                if (campo.indexOf('Imponibile') !== -1 && valore) { result.imponibile = valore; result.hasData = true; }
+                if (campo.indexOf('Ritenute') !== -1 && campo.indexOf('acconto') !== -1 && valore) { result.ritenute = valore; result.hasData = true; }
             }
         });
+        // Verifica che la pagina contenga effettivamente il quadro AU (non una pagina di errore/vuota)
+        if (!result.hasData && doc.querySelectorAll('table.table tr').length < 2) result.hasData = false;
         return result;
-    }).catch(function() { return {causale:'', ammontareLordo:'', imponibile:'', ritenute:''}; });
+    }).catch(function() { return {causale:'', ammontareLordo:'', imponibile:'', ritenute:'', hasData:false}; });
+}
+
+/* Fetch importi AU multi-modulo — itera Modulo 1…N finché trova dati */
+async function fetchAUDataMultiModulo(anno, protocollo) {
+    var moduli = [];
+    for (var m = 1; m <= 20; m++) { // safety cap a 20 moduli
+        var au = await fetchAUSingleModule(anno, protocollo, m);
+        if (!au.hasData && m > 1) break; // nessun dato dal modulo 2 in poi → fine
+        if (au.hasData) moduli.push({modulo:m, causale:au.causale, ammontareLordo:au.ammontareLordo, imponibile:au.imponibile, ritenute:au.ritenute});
+        if (!au.hasData && m === 1) break; // neanche modulo 1 ha dati AU
+        await sleep(200);
+    }
+    return moduli; // array di {modulo, causale, ammontareLordo, imponibile, ritenute}
+}
+
+/* Fetch dati Quadro DB (lavoro dipendente) — singolo modulo
+   Campi chiave nel Quadro DB:
+   - DB001 campo 001 = Redditi di lavoro dipendente e assimilati
+   - DB002 = vari campi ritenute
+   Approccio generico: cerca etichette note nella tabella */
+function fetchDBSingleModule(anno, protocollo, modulo) {
+    var url = SERVLET+'?Ric=CUK&Anno='+encodeURIComponent(anno)+'&Protocollo='+encodeURIComponent(protocollo)+'&Quadro=DB&Modulo='+modulo;
+    return fetch(url, {credentials:'include'}).then(function(r){return r.text();}).then(function(html) {
+        var doc = new DOMParser().parseFromString(html, 'text/html');
+        var result = {redditiLavDip:'', ritenuteIrpef:'', addRegionale:'', addComunale:'', hasData:false};
+        var allRows = doc.querySelectorAll('table.table tr');
+        allRows.forEach(function(tr) {
+            var tds = tr.querySelectorAll('td');
+            if (tds.length >= 3) {
+                var campo = tds[1] ? tds[1].textContent.trim() : '';
+                var valore = tds[2] ? tds[2].textContent.trim() : '';
+                // Redditi lavoro dipendente
+                if ((campo.indexOf('Redditi di lavoro dipendente') !== -1 || campo.indexOf('redditi di lavoro dipendente') !== -1) && valore) {
+                    result.redditiLavDip = valore; result.hasData = true;
+                }
+                // Ritenute IRPEF
+                if (campo.indexOf('Ritenute') !== -1 && campo.indexOf('Irpef') !== -1 && valore) {
+                    result.ritenuteIrpef = valore; result.hasData = true;
+                }
+                // Addizionale regionale
+                if (campo.indexOf('Addizionale regionale') !== -1 && valore) {
+                    result.addRegionale = valore; result.hasData = true;
+                }
+                // Addizionale comunale — acconto + saldo (prendi il primo trovato)
+                if (campo.indexOf('Addizionale comunale') !== -1 && valore && !result.addComunale) {
+                    result.addComunale = valore; result.hasData = true;
+                }
+            }
+        });
+        if (!result.hasData && allRows.length < 2) result.hasData = false;
+        return result;
+    }).catch(function() { return {redditiLavDip:'', ritenuteIrpef:'', addRegionale:'', addComunale:'', hasData:false}; });
+}
+
+/* Fetch dati DB multi-modulo */
+async function fetchDBDataMultiModulo(anno, protocollo) {
+    var moduli = [];
+    for (var m = 1; m <= 20; m++) {
+        var db = await fetchDBSingleModule(anno, protocollo, m);
+        if (!db.hasData && m > 1) break;
+        if (db.hasData) moduli.push({modulo:m, redditiLavDip:db.redditiLavDip, ritenuteIrpef:db.ritenuteIrpef, addRegionale:db.addRegionale, addComunale:db.addComunale});
+        if (!db.hasData && m === 1) break;
+        await sleep(200);
+    }
+    return moduli;
+}
+
+/* Fetch codice atto da pagina dettaglio F24 (DetF24Sel o DetF24)
+   Il codice atto si trova nel HTML come: codice atto <b>VALORE</b> */
+function fetchCodiceAtto(detHref) {
+    return fetch(detHref, {credentials:'include'}).then(function(r){return r.text();}).then(function(html) {
+        var m = html.match(/codice\s+atto\s*<b>\s*([^<]*?)\s*<\/b>/i);
+        if (m && m[1] && m[1].trim() && m[1].trim().toLowerCase() !== 'assente') return m[1].trim();
+        return '';
+    }).catch(function() { return ''; });
 }
 
 /* Batch download CU — 4) alert se > 15 */
@@ -585,27 +729,76 @@ async function runBatchCU(items) {
     setDis(false);
 }
 
-/* Report Excel CU — 1) Dettaglio come foglio 1, Riepilogo come foglio 2
-                       2) colonna Denominazione Sostituto da quadro DA */
+/* Report Excel CU — Multi-tipo (Autonomo/Dipendente/Altro) + Multi-modulo
+   Per ogni CU:
+   1) Fetch Quadro AU (lavoro autonomo) multi-modulo
+   2) Se AU vuoto, fetch Quadro DB (lavoro dipendente) multi-modulo
+   3) Una riga Excel per ogni modulo trovato
+   4) Colonne: Tipo CU, Descrizione Causale (da CAUSALI_MAP), denominazione sostituto */
 async function reportExcelCU() {
     var items = collectCU();
     if (!items.length) { showSt('\u26A0\uFE0F Nessuna CU trovata.', 0); return; }
     setDis(true);
-    var data = [];
+    var data = []; // una riga per ogni modulo di ogni CU
+    var rowN = 0;
     for (var i = 0; i < items.length; i++) {
         var cu = items[i];
         showSt('\uD83D\uDCCA Lettura dati CU ('+(i+1)+'/'+items.length+')\u2026', Math.round(i/items.length*100));
-        var au = await fetchAUData(cu.anno, cu.protocollo);
         var denom = await fetchDADenominazione(cu.anno, cu.protocollo);
         var logEntry = cuDlLog.find(function(l){return l.protocollo === cu.protocollo;});
-        data.push({
-            n: i+1, numCert: cu.numCert, data: cu.data, sostituto: cu.sostituto,
-            denominazione: denom,
-            causale: au.causale, ammontareLordo: au.ammontareLordo,
-            imponibile: au.imponibile, ritenute: au.ritenute,
-            filename: logEntry ? logEntry.filename : '', stato: logEntry ? (logEntry.ok ? 'Scaricato' : 'Errore') : 'Non scaricato'
-        });
-        await sleep(300);
+        var fname = logEntry ? logEntry.filename : '';
+        var stato = logEntry ? (logEntry.ok ? 'Scaricato' : 'Errore') : 'Non scaricato';
+
+        // 1) Prova Quadro AU (lavoro autonomo) — multi-modulo
+        var auModuli = await fetchAUDataMultiModulo(cu.anno, cu.protocollo);
+        if (auModuli.length > 0) {
+            for (var j = 0; j < auModuli.length; j++) {
+                rowN++;
+                var am = auModuli[j];
+                var descrCausale = CAUSALI_MAP[am.causale] || am.causale;
+                data.push({
+                    n: rowN, numCert: cu.numCert, data: cu.data, sostituto: cu.sostituto,
+                    denominazione: denom, tipoCU: 'Autonomo', modulo: am.modulo,
+                    causale: am.causale, descrCausale: descrCausale,
+                    col1Label: 'Ammontare Lordo', col1: am.ammontareLordo,
+                    col2Label: 'Imponibile', col2: am.imponibile,
+                    col3Label: 'Ritenute Acconto', col3: am.ritenute,
+                    col4Label: '', col4: '',
+                    filename: fname, stato: stato
+                });
+            }
+        } else {
+            // 2) Prova Quadro DB (lavoro dipendente) — multi-modulo
+            var dbModuli = await fetchDBDataMultiModulo(cu.anno, cu.protocollo);
+            if (dbModuli.length > 0) {
+                for (var k = 0; k < dbModuli.length; k++) {
+                    rowN++;
+                    var dm = dbModuli[k];
+                    data.push({
+                        n: rowN, numCert: cu.numCert, data: cu.data, sostituto: cu.sostituto,
+                        denominazione: denom, tipoCU: 'Dipendente', modulo: dm.modulo,
+                        causale: '', descrCausale: 'Lavoro dipendente e assimilati',
+                        col1Label: 'Redditi Lav.Dip.', col1: dm.redditiLavDip,
+                        col2Label: 'Ritenute IRPEF', col2: dm.ritenuteIrpef,
+                        col3Label: 'Add.Regionale', col3: dm.addRegionale,
+                        col4Label: 'Add.Comunale', col4: dm.addComunale,
+                        filename: fname, stato: stato
+                    });
+                }
+            } else {
+                // 3) Nessun dato AU n\u00e9 DB — riga con tipo "Altro"
+                rowN++;
+                data.push({
+                    n: rowN, numCert: cu.numCert, data: cu.data, sostituto: cu.sostituto,
+                    denominazione: denom, tipoCU: 'Altro', modulo: 1,
+                    causale: '', descrCausale: '',
+                    col1Label: '', col1: '', col2Label: '', col2: '',
+                    col3Label: '', col3: '', col4Label: '', col4: '',
+                    filename: fname, stato: stato
+                });
+            }
+        }
+        await sleep(200);
     }
     var cod = getIdentifier().code;
     var anno = getParam('Anno') || (items[0] && items[0].anno) || 'ANNO';
@@ -615,26 +808,34 @@ async function reportExcelCU() {
     var totOK = data.filter(function(d){return d.stato === 'Scaricato';}).length;
     var totERR = data.filter(function(d){return d.stato === 'Errore';}).length;
     var totNS = data.filter(function(d){return d.stato === 'Non scaricato';}).length;
+    var totAut = data.filter(function(d){return d.tipoCU === 'Autonomo';}).length;
+    var totDip = data.filter(function(d){return d.tipoCU === 'Dipendente';}).length;
+    var totAltro = data.filter(function(d){return d.tipoCU === 'Altro';}).length;
 
     var S = '<Style ss:ID="', E = '</Style>';
     var styles = S+'hdr"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#1a3a2a" ss:Pattern="Solid"/>'+E
         +S+'ttl"><Font ss:Bold="1" ss:Size="14"/>'+E+S+'bld"><Font ss:Bold="1"/>'+E
         +S+'ok"><Interior ss:Color="#E8F5E9" ss:Pattern="Solid"/>'+E
         +S+'er"><Interior ss:Color="#FFEBEE" ss:Pattern="Solid"/>'+E
-        +S+'wn"><Interior ss:Color="#FFF9C4" ss:Pattern="Solid"/>'+E;
+        +S+'wn"><Interior ss:Color="#FFF9C4" ss:Pattern="Solid"/>'+E
+        +S+'aut"><Interior ss:Color="#E3F2FD" ss:Pattern="Solid"/>'+E
+        +S+'dip"><Interior ss:Color="#FFF3E0" ss:Pattern="Solid"/>'+E;
     function cell(v,t,sty) { return '<Cell'+(sty?' ss:StyleID="'+sty+'"':'')+'><Data ss:Type="'+(t||'String')+'">'+esc(v)+'</Data></Cell>'; }
 
-    // Foglio 1: ELENCO CU (dettaglio) — con Denominazione Sostituto
-    var hdrs = ['N\u00B0','N. Certificazione','Data','CF Sostituto','Denominazione Sostituto','Causale','Ammontare Lordo','Imponibile','Ritenute Acconto','Nome File','Stato'];
+    // Foglio 1: ELENCO CU (dettaglio) — con Tipo CU, Desc Causale, multi-modulo
+    var hdrs = ['N\u00B0','N. Certificazione','Data','CF Sostituto','Denominazione Sostituto',
+        'Tipo CU','Modulo','Causale','Descrizione Causale',
+        'Importo 1 (Lordo/Reddito)','Importo 2 (Impon./Rit.IRPEF)','Importo 3 (Rit.Acc./Add.Reg.)','Importo 4 (Add.Com.)',
+        'Nome File','Stato'];
     var hrow = hdrs.map(function(h){return cell(h,'String','hdr');}).join('');
-    var widths = [35,180,80,130,200,60,120,120,120,260,90];
+    var widths = [35,180,80,130,200,80,55,55,260,130,130,130,100,260,90];
     var cols = widths.map(function(w){return '<Column ss:Width="'+w+'"/>';}).join('');
     var drows = data.map(function(d) {
         var sty = d.stato === 'Scaricato' ? 'ok' : (d.stato === 'Errore' ? 'er' : 'wn');
         return '<Row>'+cell(d.n,'Number',sty)+cell(d.numCert,'String',sty)+cell(d.data,'String',sty)
             +cell(d.sostituto,'String',sty)+cell(d.denominazione,'String',sty)
-            +cell(d.causale,'String',sty)+cell(d.ammontareLordo,'String',sty)
-            +cell(d.imponibile,'String',sty)+cell(d.ritenute,'String',sty)
+            +cell(d.tipoCU,'String',sty)+cell(d.modulo,'Number',sty)+cell(d.causale,'String',sty)+cell(d.descrCausale,'String',sty)
+            +cell(d.col1,'String',sty)+cell(d.col2,'String',sty)+cell(d.col3,'String',sty)+cell(d.col4,'String',sty)
             +cell(d.filename,'String',sty)+cell(d.stato,'String',sty)+'</Row>';
     }).join('');
     var sh1 = '<Worksheet ss:Name="Elenco CU"><Table>'+cols+'<Row>'+hrow+'</Row>'+drows+'</Table></Worksheet>';
@@ -648,8 +849,14 @@ async function reportExcelCU() {
         +'<Row>'+cell('Anno imposta:')+cell(anno)+'</Row>'
         +'<Row>'+cell('Data report:')+cell(nowStr)+'</Row>'
         +'<Row/>'+
-        '<Row>'+cell('CU trovate:','String','bld')+cell(items.length,'Number')+'</Row>'
-        +'<Row>'+cell('Scaricate:','String','bld')+cell(totOK,'Number','ok')+'</Row>'
+        '<Row>'+cell('CU trovate (certificazioni):','String','bld')+cell(items.length,'Number')+'</Row>'
+        +'<Row>'+cell('Righe totali (con moduli):','String','bld')+cell(data.length,'Number')+'</Row>'
+        +'<Row/>'+
+        '<Row>'+cell('Tipo Autonomo:','String','bld')+cell(totAut,'Number','aut')+'</Row>'
+        +'<Row>'+cell('Tipo Dipendente:','String','bld')+cell(totDip,'Number','dip')+'</Row>'
+        +'<Row>'+cell('Tipo Altro:','String','bld')+cell(totAltro,'Number','wn')+'</Row>'
+        +'<Row/>'+
+        '<Row>'+cell('Scaricate:','String','bld')+cell(totOK,'Number','ok')+'</Row>'
         +'<Row>'+cell('Errori:','String','bld')+cell(totERR,'Number','er')+'</Row>'
         +'<Row>'+cell('Non scaricate:','String','bld')+cell(totNS,'Number','wn')+'</Row>'
         +'</Table></Worksheet>';
@@ -658,7 +865,7 @@ async function reportExcelCU() {
         +'<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">'
         +'<Styles>'+styles+'</Styles>'+sh1+sh2+'</Workbook>';
     dlXLS(xls, safe(cod)+'_'+safe(anno)+'_ReportCU_CassettoUtility.xls');
-    showSt('\u2705 Report Excel CU generato.', 100);
+    showSt('\u2705 Report Excel CU generato (' + data.length + ' righe, ' + items.length + ' CU).', 100);
     setDis(false); setTimeout(hideSt, 4000);
 }
 
@@ -718,8 +925,8 @@ function buildXLS(rows, log) {
     return '<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Styles>'+styles+'</Styles>'+sh1+sh2+'</Workbook>';
 }
 
-/* XLS per risultati ricerca F24 — 1) Elenco primo, Riepilogo secondo */
-function buildXLSSel(rows, log) {
+/* XLS per risultati ricerca F24 — con colonna Codice Atto e filtro opzionale */
+function buildXLSSel(rows, log, filtroAtto) {
     var idInfo = getIdentifier(), cod = idInfo.code;
     var tipoCod = isDelegato() ? 'Cassetto Delegato' : (idInfo.tipo === 'cf' ? 'Cassetto Proprio (CF)' : 'Cassetto Proprio (PIVA)');
     var now = new Date(), nowStr = now.toLocaleDateString('it-IT')+' '+now.toLocaleTimeString('it-IT');
@@ -734,23 +941,25 @@ function buildXLSSel(rows, log) {
         +S+'wn"><Interior ss:Color="#FFF9C4" ss:Pattern="Solid"/>'+E;
     function cell(v,t,sty) { return '<Cell'+(sty?' ss:StyleID="'+sty+'"':'')+'><Data ss:Type="'+(t||'String')+'">'+esc(v)+'</Data></Cell>'; }
 
-    var hdrs = ['N\u00B0','Data','Tributo','Descrizione','Anno Rif.','Importo Debito','Importo Credito','Nome File','Stato'];
+    var hdrs = ['N\u00B0','Data','Tributo','Descrizione','Anno Rif.','Importo Debito','Importo Credito','Codice Atto','Nome File','Stato'];
     var hrow = hdrs.map(function(h){return cell(h,'String','hdr');}).join('');
-    var widths = [40,100,60,250,80,120,120,280,110];
+    var widths = [40,100,60,250,80,120,120,120,280,110];
     var cols = widths.map(function(w){return '<Column ss:Width="'+w+'"/>';}).join('');
     var logMap = {}; log.forEach(function(l,idx){logMap[idx]=l;});
     var drows = rows.map(function(r,i) {
         var l = logMap[i]||null;
         var fname = l?l.filename:'', stato = l?(l.ok?'Scaricato':'Errore'):'Non scaricato';
         var sty = l?(l.ok?'ok':'er'):'wn';
-        return '<Row>'+cell(i+1,'Number',sty)+cell(r.date,'String',sty)+cell(r.tributo||'','String',sty)+cell(r.descrizione||'','String',sty)+cell(r.annoRif||'','String',sty)+cell(r.importo,'String',sty)+cell(r.credito||'','String',sty)+cell(fname,'String',sty)+cell(stato,'String',sty)+'</Row>';
+        return '<Row>'+cell(i+1,'Number',sty)+cell(r.date,'String',sty)+cell(r.tributo||'','String',sty)+cell(r.descrizione||'','String',sty)+cell(r.annoRif||'','String',sty)+cell(r.importo,'String',sty)+cell(r.credito||'','String',sty)+cell(r.codiceAtto||'','String',sty)+cell(fname,'String',sty)+cell(stato,'String',sty)+'</Row>';
     }).join('');
     var sh1 = '<Worksheet ss:Name="Elenco F24 Ricerca"><Table>'+cols+'<Row>'+hrow+'</Row>'+drows+'</Table></Worksheet>';
     var sh2 = '<Worksheet ss:Name="Riepilogo"><Table><Column ss:Width="220"/><Column ss:Width="180"/>'
         +'<Row>'+cell('Cassetto_Utility v'+VERSION+' \u2014 Report F24 Ricerca','String','ttl')+'</Row>'
         +'<Row>'+cell('Identificativo:')+cell(cod)+'</Row>'
         +'<Row>'+cell('Modalit\u00e0:')+cell(tipoCod)+'</Row>'
-        +'<Row>'+cell('Data report:')+cell(nowStr)+'</Row><Row/>'
+        +'<Row>'+cell('Data report:')+cell(nowStr)+'</Row>';
+    if (filtroAtto) sh2 += '<Row>'+cell('Filtro Codice Atto:')+cell(filtroAtto)+'</Row>';
+    sh2 += '<Row/>'
         +'<Row>'+cell('Tributi trovati:','String','bld')+cell(rows.length,'Number')+'</Row><Row/>'
         +'<Row>'+cell('Scaricati:','String','bld')+cell(totOK,'Number','ok')+'</Row>'
         +'<Row>'+cell('Errori:','String','bld')+cell(totERR,'Number','er')+'</Row>'
@@ -886,13 +1095,24 @@ async function handleAction(e) {
         showSt('\u2705 Report Excel generato.', 100); setTimeout(hideSt, 4000); return;
     }
 
-    // Report Excel ricerca F24
+    // Report Excel ricerca F24 — con fetch codice atto per ogni riga
     if (action === 'reportExcelSel') {
         summaryVisible = false;
         var selR = collectF24Sel();
         if (!selR.length) { showSt('\u26A0\uFE0F Nessun tributo trovato.', 0); return; }
-        dlXLS(buildXLSSel(selR, dlLog), safe(getIdentifier().code)+'_RicercaF24_CassettoUtility.xls');
-        showSt('\u2705 Report Excel ricerca F24 generato.', 100); setTimeout(hideSt, 4000); return;
+        setDis(true);
+        // Fetch codice atto per ogni riga
+        for (var ra = 0; ra < selR.length; ra++) {
+            showSt('\uD83C\uDFAF Lettura codice atto ('+(ra+1)+'/'+selR.length+')\u2026', Math.round(ra/selR.length*100));
+            selR[ra].codiceAtto = await fetchCodiceAtto(selR[ra].detHref);
+            await sleep(300);
+        }
+        // Applica filtro codice atto se presente
+        var filtroAttoXls = '';
+        var attoInputXls = document.getElementById('CU_AttoInput');
+        if (attoInputXls) filtroAttoXls = attoInputXls.value.trim();
+        dlXLS(buildXLSSel(selR, dlLog, filtroAttoXls), safe(getIdentifier().code)+'_RicercaF24_CassettoUtility.xls');
+        showSt('\u2705 Report Excel ricerca F24 generato.', 100); setDis(false); setTimeout(hideSt, 4000); return;
     }
 
     // Batch download CU
