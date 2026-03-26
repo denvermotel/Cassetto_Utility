@@ -1,4 +1,4 @@
-<!-- v0.06 beta -->
+<!-- v0.07 beta -->
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -78,7 +78,7 @@
 <body>
     <header class="hero">
         <div class="hero-inner">
-            <div class="hero-badge"><span class="dot"></span> v0.06 beta — Ultimo aggiornamento: Marzo 2026</div>
+            <div class="hero-badge"><span class="dot"></span> v0.07 beta — Ultimo aggiornamento: Marzo 2026</div>
             <h1>🧳 Cassetto_Utility<br><span>Toolbox per il Cassetto Fiscale</span></h1>
             <p class="subtitle">Userscript per Tampermonkey/Greasemonkey che aggiunge una barra degli strumenti al Cassetto Fiscale dell'Agenzia delle Entrate con download massivo F24/F23/CU e Report Excel.</p>
             <div class="hero-actions">
@@ -89,12 +89,13 @@
     </header>
     <div class="toolbar-preview">
         <div class="toolbar-mock">
-            <span class="title">🧳 Cassetto_Utility v0.06β</span>
+            <span class="title">🧳 Cassetto_Utility v0.07β</span>
             <span class="mock-badge">🏢 09876543210</span>
             <span class="mock-dtag">F24</span>
             <span class="mock-btn">🧳⬇ Scarica F24</span>
             <span class="mock-btn">📊 Report Excel</span>
             <span class="mock-btn">🔍 Riepilogo</span>
+            <span style="font-size:11px;color:#80cbc4;white-space:nowrap">🎯 Cod.Atto: <span style="background:#263238;border:1px solid #43a047;border-radius:3px;padding:1px 6px;font-size:10px">55438…</span></span>
             <span class="mock-btn">📅 Selettore Date</span>
             <span class="spacer"></span>
             <span class="mock-info">ℹ️</span>
@@ -105,7 +106,7 @@
 
     <div class="toolbar-preview" style="margin-top:8px">
         <div class="toolbar-mock">
-            <span class="title">🧳 Cassetto_Utility v0.06β</span>
+            <span class="title">🧳 Cassetto_Utility v0.07β</span>
             <span class="mock-badge">🏢 09876543210</span>
             <span class="mock-dtag">CU</span>
             <span class="mock-btn">🧳⬇ Scarica CU</span>
@@ -141,9 +142,9 @@
                 <div class="feature-card"><div class="feature-icon">🧳⬇</div><h4>Scarica F24</h4><p>Download massivo delle quietanze PDF (o Copia F24 come fallback) per tutti i versamenti dell'anno selezionato.</p></div>
                 <div class="feature-card"><div class="feature-icon">🧳⬇</div><h4>Scarica F23</h4><p>Download massivo delle copie PDF dei modelli F23. Solo copia del modello.</p></div>
                 <div class="feature-card"><div class="feature-icon">🧳⬇</div><h4>Scarica CU</h4><p>Download massivo PDF di tutte le CU ricevute. Alert di conferma se le CU superano 15 (procedura non interrompibile).</p></div>
-                <div class="feature-card"><div class="feature-icon">📊</div><h4>Report Excel CU</h4><p>File <code>.xls</code> con elenco + riepilogo. Include denominazione sostituto (da Quadro DA) e importi dal Quadro AU.</p></div>
+                <div class="feature-card"><div class="feature-icon">📊</div><h4>Report Excel CU</h4><p>File <code>.xls</code> con elenco + riepilogo. Supporto CU lavoro autonomo (Quadro AU) e dipendente (Quadro DB), multi-modulo, mappa 30 causali, denominazione sostituto.</p></div>
                 <div class="feature-card"><div class="feature-icon">📊</div><h4>Report Excel F24/F23</h4><p>File <code>.xls</code> con Elenco (dettaglio) + Riepilogo e raffronto ✅ scaricato · ❌ errore · ⏳ non scaricato.</p></div>
-                <div class="feature-card"><div class="feature-icon">📅</div><h4>Ricerche tributi F24</h4><p>Selettore date (Anno/Trimestre/Mese) nel tab "Ricerca per data versamento". Download e Report Excel dai risultati.</p></div>
+                <div class="feature-card"><div class="feature-icon">📅</div><h4>Ricerche tributi F24</h4><p>Selettore date (Anno/Trimestre/Mese). Filtro per codice atto: scarica solo F24 con un determinato codice atto. Report Excel con colonna Codice Atto.</p></div>
                 <div class="feature-card"><div class="feature-icon">🔄</div><h4>Navigazione dinamica</h4><p>La barra rileva i cambi di pagina e aggiorna i pulsanti. Dalle pagine generiche: link rapidi "Vai a CU" e "Vai a Versamenti".</p></div>
                 <div class="feature-card"><div class="feature-icon">📋</div><h4>Protocolli F24</h4><p>Copia negli appunti data + numero di protocollo di tutti i versamenti F24.</p></div>
                 <div class="feature-card"><div class="feature-icon">👥</div><h4>Cassetto delegato</h4><p>Rilevamento automatico: PIVA delegato, PIVA propria (11 cifre) o CF (16 caratteri) con cascata di priorità.</p></div>
@@ -154,12 +155,13 @@
                 <thead><tr><th>Pulsante</th><th>Contesto</th><th>Descrizione</th></tr></thead>
                 <tbody>
                     <tr><td>🧳⬇ <strong>Scarica CU</strong></td><td>Lista CU</td><td>Download massivo PDF CU via POST (alert se &gt; 15)</td></tr>
-                    <tr><td>📊 <strong>Report Excel CU</strong></td><td>Lista CU</td><td><code>.xls</code> con denominazione sostituto + importi da Quadro AU</td></tr>
+                    <tr><td>📊 <strong>Report Excel CU</strong></td><td>Lista CU</td><td><code>.xls</code> con Tipo CU, causali, importi AU/DB, multi-modulo, denominazione sostituto</td></tr>
                     <tr><td>🧳⬇ <strong>Genera PDF CU</strong></td><td>Dettaglio CU</td><td>Download PDF singola CU</td></tr>
                     <tr><td>🧳⬇ <strong>Scarica F24</strong></td><td>Lista F24 / Ricerca F24</td><td>Quietanza PDF o Copia F24</td></tr>
                     <tr><td>🧳⬇ <strong>Scarica F23</strong></td><td>Lista F23</td><td>Copia PDF modello F23</td></tr>
                     <tr><td>📊 <strong>Report Excel</strong></td><td>Lista F24/F23 / Ricerca F24</td><td><code>.xls</code> con Elenco + Riepilogo</td></tr>
                     <tr><td>📅 <strong>Selettore Date</strong></td><td>Ricerche tributi F24</td><td>Anno/Trimestre/Mese → compila Dal/Al</td></tr>
+                    <tr><td>🎯 <strong>Cod.Atto</strong> (input)</td><td>Ricerche tributi F24</td><td>Filtra download e report per codice atto specifico</td></tr>
                     <tr><td>📋 <strong>Protocolli</strong></td><td>Lista F24</td><td>Copia data + protocollo in clipboard</td></tr>
                     <tr><td>📄 <strong>Vai a CU</strong> / ⚠ <strong>Vai a Versamenti</strong></td><td>Pagine generiche</td><td>Link di navigazione rapida</td></tr>
                 </tbody>
@@ -183,7 +185,18 @@
             <span class="section-label">Cosa è cambiato?</span>
             <h2>📝 Changelog</h2>
             <div class="changelog-entry">
-                <div class="changelog-version">v0.06 beta <span class="changelog-tag">Latest</span></div>
+                <div class="changelog-version">v0.07 beta <span class="changelog-tag">Latest</span></div>
+                <ul class="changelog-list">
+                    <li><span class="changelog-tag new">NEW</span> CU multi-tipo: supporto lavoro autonomo (Quadro AU) e dipendente (Quadro DB) con rilevamento automatico</li>
+                    <li><span class="changelog-tag new">NEW</span> CU multi-modulo: iterazione automatica su Modulo 1…N, una riga Excel per modulo</li>
+                    <li><span class="changelog-tag new">NEW</span> Mappa completa 30 causali CU da normativa (A→ZO) con descrizione nel Report Excel</li>
+                    <li><span class="changelog-tag new">NEW</span> Filtro Codice Atto per Ricerche tributi F24: campo input nella barra, pre-fetch e filtraggio</li>
+                    <li><span class="changelog-tag new">NEW</span> Colonna "Codice Atto" nel Report Excel Ricerca F24</li>
+                    <li><span class="changelog-tag new">CHG</span> Report Excel CU: nuove colonne Tipo CU, Modulo, Descrizione Causale, riepilogo per tipo</li>
+                </ul>
+            </div>
+            <div class="changelog-entry">
+                <div class="changelog-version">v0.06 beta</div>
                 <ul class="changelog-list">
                     <li><span class="changelog-tag new">NEW</span> Supporto CU ricevute (<code>Ric=CUK</code>): download massivo PDF, Report Excel con denominazione sostituto (da Quadro DA) e importi (da Quadro AU)</li>
                     <li><span class="changelog-tag new">NEW</span> Ricerche tributi F24 (<code>Ric=F24Sel</code>): download, Report Excel, Selettore Date (Anno/Trimestre/Mese)</li>
@@ -214,7 +227,7 @@
             <p><strong>Cassetto_Utility</strong> è un progetto open source distribuito sotto licenza <a href="https://www.gnu.org/licenses/gpl-3.0" target="_blank">GPL v3</a>.</p>
             <p style="margin-top:8px;font-size:13px;color:var(--gray-500);">Il software è fornito "così com'è", senza garanzie. L'utente è l'unico responsabile dell'uso che ne viene fatto.</p>
             <div class="footer-badges">
-                <img src="https://img.shields.io/badge/versione-0.06%20beta-green" alt="Versione">
+                <img src="https://img.shields.io/badge/versione-0.07%20beta-green" alt="Versione">
                 <img src="https://img.shields.io/badge/licenza-GPL%20v3-blue" alt="Licenza">
                 <img src="https://img.shields.io/badge/Tampermonkey-compatibile-brightgreen" alt="Tampermonkey">
                 <img src="https://img.shields.io/badge/Greasemonkey-compatibile-orange" alt="Greasemonkey">
