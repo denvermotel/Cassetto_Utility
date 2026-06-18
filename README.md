@@ -4,7 +4,7 @@
 
 Userscript per Tampermonkey / Greasemonkey che aggiunge una barra degli strumenti al Cassetto Fiscale dell'Agenzia delle Entrate, con download massivo F24/F23/CU e Report Excel.
 
-[![Version](https://img.shields.io/badge/versione-0.07%20beta-green)](#)
+[![Version](https://img.shields.io/badge/versione-0.08%20beta-green)](#)
 [![License: GPL v3](https://img.shields.io/badge/licenza-GPL%20v3-blue)](https://www.gnu.org/licenses/gpl-3.0)
 [![Tampermonkey](https://img.shields.io/badge/Tampermonkey-compatibile-brightgreen)](https://www.tampermonkey.net/)
 [![Greasemonkey](https://img.shields.io/badge/Greasemonkey-compatibile-orange)](https://www.greasespot.net/)
@@ -42,6 +42,9 @@ Download massivo dei PDF di tutte le Certificazioni Uniche ricevute (`Ric=CUK`).
 
 ### 📊 Report Excel F24/F23
 File `.xls` con Elenco (dettaglio) + Riepilogo e raffronto ✅/❌/⏳.
+
+### 📑 Dettaglio Tributi F24
+File `.xls` con **una riga per ogni codice tributo/causale** di tutti gli F24 dell'anno selezionato. Legge il dettaglio di ogni versamento (fetch sequenziale con barra di avanzamento) ed estrae per ciascun rigo: Data versamento, Protocollo, Sezione (Erario/INPS/INAIL/Regioni/IMU…), Codice tributo, Descrizione (dal dettaglio, dove presente), Rateazione/regione/provincia/mese rif., Anno di riferimento, Codice atto, Importo a credito e Importo a debito separati.
 
 ### 📊 Report Excel CU
 File `.xls` con elenco e riepilogo di tutte le CU. Per ogni certificazione vengono recuperati automaticamente i dati dal quadro pertinente:
@@ -86,6 +89,7 @@ Rilevamento automatico PIVA delegato / PIVA propria / CF con cascata di priorit�
 | 🧳⬇ **Scarica F23** | Lista F23 | Copia PDF modello F23 |
 | 🧳⬇ **Scarica CU** | Lista CU | Download massivo PDF CU via POST (alert se > 15) |
 | 📊 **Report Excel** | Lista F24/F23 / Ricerca F24 | `.xls` con Elenco + Riepilogo |
+| 📑 **Dettaglio Tributi** | Lista F24 | `.xls` con una riga per codice tributo (sezione, descrizione, codice atto, credito/debito) |
 | 📊 **Report Excel CU** | Lista CU | `.xls` con denominazione sostituto + importi da Quadro AU |
 | 📋 **Protocolli** | Lista F24 | Copia data + protocollo in clipboard |
 | 📅 **Selettore Date** | Ricerche tributi F24 | Anno/Trimestre/Mese → compila Dal/Al |

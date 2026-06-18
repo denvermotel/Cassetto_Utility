@@ -3,7 +3,7 @@
 // @namespace      https://denvermotel.github.io/Cassetto_Utility/
 // @downloadURL    https://raw.githubusercontent.com/denvermotel/Cassetto_Utility/refs/heads/main/Cassetto_Utility.user.js
 // @updateURL      https://raw.githubusercontent.com/denvermotel/Cassetto_Utility/refs/heads/main/Cassetto_Utility.user.js
-// @version        0.07-beta
+// @version        0.08-beta
 // @description    Toolbox per cassetto.agenziaentrate.gov.it: download massivo F24/F23/CU, Report Excel, supporto cassetto proprio e delegato
 // @author         denvermotel
 // @match          https://cassetto.agenziaentrate.gov.it/*
@@ -20,8 +20,13 @@
 // ==/UserScript==
 
 /**
- * Cassetto_Utility - v0.07 beta
+ * Cassetto_Utility - v0.08 beta
  * Userscript per il portale cassetto.agenziaentrate.gov.it
+ *
+ * Changelog 0.08b (aggiornamento):
+ *   - NEW: Report "Dettaglio Tributi F24" — legge il dettaglio di ogni F24 dell'anno e
+ *          produce un Excel con una riga per codice tributo (sezione, descrizione, codice
+ *          atto, importo a credito/debito separati)
  *
  * Changelog 0.07b (aggiornamento):
  *   - NEW: CU multi-tipo — supporto CU lavoro dipendente + autonomo + tutti i codici causale normativa
@@ -47,7 +52,7 @@ if (_win._CassettoUtility) {
 _win._CassettoUtility = true;
 
 /* ─── COSTANTI ───────────────────────────────────────────────── */
-var VERSION = '0.07\u03B2';
+var VERSION = '0.08\u03B2';
 var PANEL_ID = 'CU_Panel';
 var INSTRUCTIONS_URL = 'https://denvermotel.github.io/Cassetto_Utility/';
 var BASE_URL = window.location.origin;
@@ -250,6 +255,7 @@ function rebuildButtons() {
         h = '<button class="cuBtn cu-green" data-action="downloadAll">\uD83E\uDDC3\u2B07 Scarica F24</button>'+
             '<button class="cuBtn cu-blue" data-action="copyProto">\uD83D\uDCCB Protocolli</button>'+
             '<button class="cuBtn cu-purple" data-action="reportExcel">\uD83D\uDCCA Report Excel</button>'+
+            '<button class="cuBtn cu-teal" data-action="reportTributiF24">\uD83D\uDCD1 Dettaglio Tributi</button>'+
             '<button class="cuBtn cu-orange" data-action="summary">\uD83D\uDD0D Riepilogo</button>';
     } else if (isF23List) {
         h = '<button class="cuBtn cu-green" data-action="downloadAllF23">\uD83E\uDDC3\u2B07 Scarica F23</button>'+
@@ -696,6 +702,48 @@ function fetchCodiceAtto(detHref) {
     }).catch(function() { return ''; });
 }
 
+/* Fetch + parsing del dettaglio F24 (Ric=DetF24…): estrae codice atto e una riga per
+   ogni codice tributo/causale di tutte le sezioni (Erario, INPS, INAIL, Regioni, IMU…).
+   Le colonne variano per sezione, ma td[headers="debito"]/td[headers="credito"] sono
+   ancore costanti; il codice (tributo/causale/pos.ass.) è sempre nel <th> del rigo,
+   la descrizione (quando presente) in td[headers="tributo"].
+   Su errore di rete restituisce {codiceAtto:'', righi:[]}. */
+function fetchF24Tributi(detHref) {
+    return fetch(detHref, {credentials:'include'}).then(function(r){return r.text();}).then(function(html) {
+        var codiceAtto = '';
+        var ma = html.match(/codice\s+atto\s*<b>\s*([^<]*?)\s*<\/b>/i);
+        if (ma && ma[1] && ma[1].trim() && ma[1].trim().toLowerCase() !== 'assente') codiceAtto = ma[1].trim();
+
+        var doc = new DOMParser().parseFromString(html, 'text/html');
+        var righi = [];
+        function clean(el) { return el ? el.textContent.trim().replace(/\s+/g,' ') : ''; }
+
+        doc.querySelectorAll('h4').forEach(function(h4) {
+            var titolo = h4.textContent.trim().replace(/\s+/g,' ');
+            if (!/Sezione/i.test(titolo)) return;
+            var sezione = titolo.replace(/^Sezione\s*/i, '').trim();
+            var box = h4.closest('div.border') || h4.parentElement;
+            var table = box ? box.querySelector('table') : null;
+            if (!table) return;
+            table.querySelectorAll('tbody > tr').forEach(function(tr) {
+                var deb = tr.querySelector('td[headers="debito"]');
+                var cred = tr.querySelector('td[headers="credito"]');
+                if (!deb && !cred) return; // salta righe non-dato
+                righi.push({
+                    sezione: sezione,
+                    codice: clean(tr.querySelector('th[headers]')),
+                    descrizione: clean(tr.querySelector('td[headers="tributo"]')),
+                    rateazione: clean(tr.querySelector('td[headers="rateazione"]')),
+                    anno: clean(tr.querySelector('td[headers="anno"]')),
+                    debito: clean(deb),
+                    credito: clean(cred)
+                });
+            });
+        });
+        return { codiceAtto: codiceAtto, righi: righi };
+    }).catch(function() { return { codiceAtto: '', righi: [] }; });
+}
+
 /* Batch download CU — 4) alert se > 15 */
 var cuDlLog = [];
 
@@ -967,6 +1015,43 @@ function buildXLSSel(rows, log, filtroAtto) {
     return '<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Styles>'+styles+'</Styles>'+sh1+sh2+'</Workbook>';
 }
 
+/* XLS "Dettaglio Tributi F24" — una riga per ogni codice tributo/causale, con sezione,
+   descrizione, codice atto e importi a credito/debito separati. */
+function buildXLSTributi(tribRows, nF24, errLetture) {
+    var idInfo = getIdentifier(), cod = idInfo.code;
+    var tipoCod = isDelegato() ? 'Cassetto Delegato' : (idInfo.tipo === 'cf' ? 'Cassetto Proprio (CF)' : 'Cassetto Proprio (PIVA)');
+    var anno = getParam('Anno') || '', now = new Date();
+    var nowStr = now.toLocaleDateString('it-IT')+' '+now.toLocaleTimeString('it-IT');
+    var S = '<Style ss:ID="', E = '</Style>';
+    var styles = S+'hdr"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#1a3a2a" ss:Pattern="Solid"/>'+E
+        +S+'ttl"><Font ss:Bold="1" ss:Size="14"/>'+E+S+'bld"><Font ss:Bold="1"/>'+E;
+    function cell(v,t,sty) { return '<Cell'+(sty?' ss:StyleID="'+sty+'"':'')+'><Data ss:Type="'+(t||'String')+'">'+esc(v)+'</Data></Cell>'; }
+
+    var hdrs = ['Data versamento','Protocollo','Sezione','Codice tributo','Descrizione','Rateazione, regione/provincia, mese rif.','Anno di riferimento','Codice atto','Importo a credito','Importo a debito'];
+    var hrow = hdrs.map(function(h){return cell(h,'String','hdr');}).join('');
+    var widths = [110,200,180,90,300,200,110,110,120,120];
+    var cols = widths.map(function(w){return '<Column ss:Width="'+w+'"/>';}).join('');
+    var drows = tribRows.map(function(r) {
+        return '<Row>'+cell(r.data,'String')+cell(r.protocollo,'String')+cell(r.sezione,'String')
+            +cell(r.codice,'String')+cell(r.descrizione,'String')+cell(r.rateazione,'String')+cell(r.anno,'String')
+            +cell(r.codiceAtto,'String')+cell(r.credito,'String')+cell(r.debito,'String')+'</Row>';
+    }).join('');
+    var sh1 = '<Worksheet ss:Name="Dettaglio Tributi"><Table>'+cols+'<Row>'+hrow+'</Row>'+drows+'</Table></Worksheet>';
+
+    var sh2 = '<Worksheet ss:Name="Riepilogo"><Table><Column ss:Width="220"/><Column ss:Width="180"/>'
+        +'<Row>'+cell('Cassetto_Utility v'+VERSION+' — Dettaglio Tributi F24','String','ttl')+'</Row>'
+        +'<Row>'+cell('Identificativo (PIVA/CF):')+cell(cod)+'</Row>'
+        +'<Row>'+cell('Modalità:')+cell(tipoCod)+'</Row>'
+        +'<Row>'+cell('Anno selezionato:')+cell(anno)+'</Row>'
+        +'<Row>'+cell('Data report:')+cell(nowStr)+'</Row><Row/>'
+        +'<Row>'+cell('F24 letti:','String','bld')+cell(nF24,'Number')+'</Row>'
+        +'<Row>'+cell('Righi tributo totali:','String','bld')+cell(tribRows.length,'Number')+'</Row>'
+        +'<Row>'+cell('F24 non letti (errore):','String','bld')+cell(errLetture,'Number')+'</Row>'
+        +'</Table></Worksheet>';
+
+    return '<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Styles>'+styles+'</Styles>'+sh1+sh2+'</Workbook>';
+}
+
 function dlXLS(content, fname) {
     var blob = new Blob([content],{type:'application/vnd.ms-excel;charset=UTF-8'});
     saveBlob(blob, fname);
@@ -1093,6 +1178,33 @@ async function handleAction(e) {
         var cod = getIdentifier().code, anno = getParam('Anno') || 'ANNO';
         dlXLS(buildXLS(rows3, dlLog), safe(cod)+'_'+safe(anno)+'_Report'+docType+'_CassettoUtility.xls');
         showSt('\u2705 Report Excel generato.', 100); setTimeout(hideSt, 4000); return;
+    }
+
+    // Report Excel "Dettaglio Tributi F24" \u2014 legge il dettaglio di ogni F24 e ribalta i righi tributo
+    if (action === 'reportTributiF24') {
+        summaryVisible = false;
+        var rowsT = collectF24();
+        if (!rowsT.length) { showSt('\u26a0\ufe0f Nessun F24 trovato.', 0); return; }
+        setDis(true);
+        var trib = [], errLetture = 0;
+        for (var it = 0; it < rowsT.length; it++) {
+            showSt('\ud83d\udcd1 Lettura dettaglio F24 ('+(it+1)+'/'+rowsT.length+')\u2026', Math.round(it/rowsT.length*100));
+            var det = await fetchF24Tributi(rowsT[it].detHref);
+            if (!det.righi.length) errLetture++;
+            det.righi.forEach(function(r) {
+                trib.push({
+                    data: rowsT[it].date, protocollo: rowsT[it].proto,
+                    sezione: r.sezione, codice: r.codice, descrizione: r.descrizione,
+                    rateazione: r.rateazione, anno: r.anno,
+                    codiceAtto: det.codiceAtto, credito: r.credito, debito: r.debito
+                });
+            });
+            await sleep(600);
+        }
+        var codT = getIdentifier().code, annoT = getParam('Anno') || 'ANNO';
+        dlXLS(buildXLSTributi(trib, rowsT.length, errLetture), safe(codT)+'_'+safe(annoT)+'_DettaglioTributiF24_CassettoUtility.xls');
+        showSt('\u2705 Report dettaglio tributi generato: '+trib.length+' righi da '+rowsT.length+' F24'+(errLetture?' (\u26a0\ufe0f '+errLetture+' non letti)':'')+'.', 100);
+        setDis(false); setTimeout(hideSt, 5000); return;
     }
 
     // Report Excel ricerca F24 — con fetch codice atto per ogni riga

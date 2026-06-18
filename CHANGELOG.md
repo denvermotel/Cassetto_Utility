@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.08-beta] — 2026-06-18
+
+### Nuovo
+- **Report "Dettaglio Tributi F24"**: nuovo pulsante 📑 nella lista F24 che legge il dettaglio di ogni F24 dell'anno selezionato (fetch sequenziale con barra di avanzamento) e genera un Excel con **una riga per ogni codice tributo/causale**. Colonne: Data versamento, Protocollo, Sezione (Erario/INPS/INAIL/Regioni/IMU…), Codice tributo, Descrizione (dal dettaglio, dove presente), Rateazione/regione/provincia/mese rif., Anno di riferimento, Codice atto, Importo a credito e Importo a debito separati. Foglio di riepilogo con conteggio F24 letti e righi totali
+
 ## [0.07-beta] — 2026-03-26
 
 ### Nuovo

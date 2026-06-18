@@ -1,4 +1,4 @@
-<!-- v0.07 beta -->
+<!-- v0.08 beta -->
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -72,28 +72,39 @@
         footer{background:var(--gray-900);color:var(--gray-400);padding:40px 24px;text-align:center;font-size:14px}
         footer a{color:var(--green-400);text-decoration:none}footer a:hover{text-decoration:underline}
         .footer-badges{display:flex;justify-content:center;gap:8px;margin-top:16px;flex-wrap:wrap}.footer-badges img{height:22px}
-        @media(max-width:640px){.hero{padding:48px 20px 40px}.toolbar-mock{font-size:11px;gap:4px;padding:8px 10px}.features-grid{grid-template-columns:1fr}.hero-actions{flex-direction:column}.btn{justify-content:center}}
+        .browser-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:24px;margin-bottom:0}
+        .browser-tab{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:8px 8px 0 0;border:1px solid var(--gray-200);border-bottom:none;background:var(--gray-100);color:var(--gray-600);font-family:var(--font-body);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s}
+        .browser-tab:hover{background:var(--gray-200);color:var(--gray-800)}
+        .browser-tab.active{background:var(--white);color:var(--green-700);border-color:var(--gray-200);border-bottom-color:var(--white);position:relative;z-index:1}
+        .browser-tab .browser-icon{font-size:18px}
+        .browser-panels{border:1px solid var(--gray-200);border-radius:0 8px 8px 8px;background:var(--white);margin-bottom:0;position:relative}
+        .browser-panel{display:none;padding:28px 24px}
+        .browser-panel.active{display:block}
+        .browser-panel .steps{margin-top:0}
+        @media(max-width:640px){.hero{padding:48px 20px 40px}.toolbar-mock{font-size:11px;gap:4px;padding:8px 10px}.features-grid{grid-template-columns:1fr}.hero-actions{flex-direction:column}.btn{justify-content:center}.browser-tab{font-size:13px;padding:8px 14px}}
     </style>
 </head>
 <body>
     <header class="hero">
         <div class="hero-inner">
-            <div class="hero-badge"><span class="dot"></span> v0.07 beta — Ultimo aggiornamento: Marzo 2026</div>
+            <div class="hero-badge"><span class="dot"></span> v0.08 beta — Ultimo aggiornamento: Giugno 2026</div>
             <h1>🧳 Cassetto_Utility<br><span>Toolbox per il Cassetto Fiscale</span></h1>
             <p class="subtitle">Userscript per Tampermonkey/Greasemonkey che aggiunge una barra degli strumenti al Cassetto Fiscale dell'Agenzia delle Entrate con download massivo F24/F23/CU e Report Excel.</p>
             <div class="hero-actions">
                 <a href="https://raw.githubusercontent.com/denvermotel/Cassetto_Utility/refs/heads/main/Cassetto_Utility.user.js" class="btn btn-primary">➤ Installa Cassetto_Utility</a>
                 <a href="https://github.com/denvermotel/Cassetto_Utility" class="btn btn-secondary" target="_blank" rel="noopener">GitHub Repository</a>
+                <a href="#installazione" class="btn btn-secondary">📖 Istruzioni installazione</a>
             </div>
         </div>
     </header>
     <div class="toolbar-preview">
         <div class="toolbar-mock">
-            <span class="title">🧳 Cassetto_Utility v0.07β</span>
+            <span class="title">🧳 Cassetto_Utility v0.08β</span>
             <span class="mock-badge">🏢 09876543210</span>
             <span class="mock-dtag">F24</span>
             <span class="mock-btn">🧳⬇ Scarica F24</span>
             <span class="mock-btn">📊 Report Excel</span>
+            <span class="mock-btn">📑 Dettaglio Tributi</span>
             <span class="mock-btn">🔍 Riepilogo</span>
             <span style="font-size:11px;color:#80cbc4;white-space:nowrap">🎯 Cod.Atto: <span style="background:#263238;border:1px solid #43a047;border-radius:3px;padding:1px 6px;font-size:10px">55438…</span></span>
             <span class="mock-btn">📅 Selettore Date</span>
@@ -106,7 +117,7 @@
 
     <div class="toolbar-preview" style="margin-top:8px">
         <div class="toolbar-mock">
-            <span class="title">🧳 Cassetto_Utility v0.07β</span>
+            <span class="title">🧳 Cassetto_Utility v0.08β</span>
             <span class="mock-badge">🏢 09876543210</span>
             <span class="mock-dtag">CU</span>
             <span class="mock-btn">🧳⬇ Scarica CU</span>
@@ -123,11 +134,179 @@
         <div class="container">
             <span class="section-label">Guida rapida</span>
             <h2>Installazione</h2>
-            <p>Richiede un'estensione per userscript nel browser. L'installazione richiede meno di 2 minuti.</p>
-            <div class="steps">
-                <div class="step"><div class="step-num">1</div><div class="step-content"><h4>Installa l'estensione del browser</h4><p><a href="https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo" target="_blank">Tampermonkey per Chrome/Edge</a> · <a href="https://addons.mozilla.org/it/firefox/addon/tampermonkey/" target="_blank">Tampermonkey per Firefox</a> · <a href="https://addons.mozilla.org/it/firefox/addon/greasemonkey/" target="_blank">Greasemonkey per Firefox</a></p></div></div>
-                <div class="step"><div class="step-num">2</div><div class="step-content"><h4>Installa lo userscript</h4><p>Clicca il pulsante — Tampermonkey aprirà la finestra di conferma:</p><p><a href="https://raw.githubusercontent.com/denvermotel/Cassetto_Utility/refs/heads/main/Cassetto_Utility.user.js" class="btn btn-primary" style="display:inline-flex;font-size:14px;padding:10px 20px;">➤ Installa Cassetto_Utility.user.js</a></p></div></div>
-                <div class="step"><div class="step-num">3</div><div class="step-content"><h4>Accedi al Cassetto Fiscale</h4><p>Vai su <a href="https://cassetto.agenziaentrate.gov.it" target="_blank">cassetto.agenziaentrate.gov.it</a> e naviga nella sezione desiderata. La barra apparirà automaticamente.</p></div></div>
+            <p>Richiede un'estensione per userscript nel browser. L'installazione richiede meno di 2 minuti. Seleziona il tuo browser:</p>
+
+            <div class="browser-tabs" role="tablist">
+                <button class="browser-tab active" role="tab" aria-selected="true" aria-controls="panel-chrome" onclick="switchBrowser('chrome')">
+                    <span class="browser-icon">🌐</span> Chrome
+                </button>
+                <button class="browser-tab" role="tab" aria-selected="false" aria-controls="panel-edge" onclick="switchBrowser('edge')">
+                    <span class="browser-icon">🔷</span> Edge
+                </button>
+                <button class="browser-tab" role="tab" aria-selected="false" aria-controls="panel-firefox" onclick="switchBrowser('firefox')">
+                    <span class="browser-icon">🦊</span> Firefox
+                </button>
+                <button class="browser-tab" role="tab" aria-selected="false" aria-controls="panel-safari" onclick="switchBrowser('safari')">
+                    <span class="browser-icon">🧭</span> Safari
+                </button>
+            </div>
+
+            <div class="browser-panels">
+
+                <!-- CHROME -->
+                <div id="panel-chrome" class="browser-panel active" role="tabpanel">
+                    <div class="steps">
+                        <div class="step">
+                            <div class="step-num">1</div>
+                            <div class="step-content">
+                                <h4>Installa Tampermonkey per Chrome</h4>
+                                <p>Scarica l'estensione dal Chrome Web Store:</p>
+                                <p><a href="https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo" target="_blank" rel="noopener">Tampermonkey — Chrome Web Store →</a></p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-num">2</div>
+                            <div class="step-content">
+                                <h4>Abilita gli script utente</h4>
+                                <p>Chrome richiede un'autorizzazione aggiuntiva. <strong>Senza questo passaggio lo script non funzionerà.</strong></p>
+                                <ol style="margin:8px 0 4px 20px;font-size:14px;line-height:1.8;">
+                                    <li>Apri <code>chrome://extensions</code> nella barra degli indirizzi</li>
+                                    <li>Trova <strong>Tampermonkey</strong> e clicca <strong>Dettagli</strong></li>
+                                    <li>Attiva l'opzione <strong>«Consenti script utente»</strong></li>
+                                </ol>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-num">3</div>
+                            <div class="step-content">
+                                <h4>Installa Cassetto_Utility</h4>
+                                <p>Clicca il pulsante — Tampermonkey aprirà la finestra di conferma:</p>
+                                <p><a href="https://raw.githubusercontent.com/denvermotel/Cassetto_Utility/refs/heads/main/Cassetto_Utility.user.js" class="btn btn-primary" style="display:inline-flex;font-size:14px;padding:10px 20px;">➤ Installa Cassetto_Utility.user.js</a></p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-num">4</div>
+                            <div class="step-content">
+                                <h4>Accedi al Cassetto Fiscale</h4>
+                                <p>Vai su <a href="https://cassetto.agenziaentrate.gov.it" target="_blank" rel="noopener">cassetto.agenziaentrate.gov.it</a> e naviga nella sezione desiderata — la barra apparirà automaticamente.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- EDGE -->
+                <div id="panel-edge" class="browser-panel" role="tabpanel">
+                    <div class="steps">
+                        <div class="step">
+                            <div class="step-num">1</div>
+                            <div class="step-content">
+                                <h4>Installa Tampermonkey per Edge</h4>
+                                <p>Scarica l'estensione dal Microsoft Edge Add-ons Store:</p>
+                                <p><a href="https://microsoftedge.microsoft.com/addons/detail/tampermonkey/iikmkjmpaadaobahmlepeloendndfphd" target="_blank" rel="noopener">Tampermonkey — Edge Add-ons →</a></p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-num">2</div>
+                            <div class="step-content">
+                                <h4>Abilita gli script utente</h4>
+                                <p>Edge richiede un'autorizzazione aggiuntiva. <strong>Senza questo passaggio lo script non funzionerà.</strong></p>
+                                <ol style="margin:8px 0 4px 20px;font-size:14px;line-height:1.8;">
+                                    <li>Apri <code>edge://extensions</code> nella barra degli indirizzi</li>
+                                    <li>Trova <strong>Tampermonkey</strong> e clicca <strong>Dettagli</strong></li>
+                                    <li>Attiva l'opzione <strong>«Consenti script utente»</strong> (o <em>"Allow user scripts"</em>)</li>
+                                </ol>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-num">3</div>
+                            <div class="step-content">
+                                <h4>Installa Cassetto_Utility</h4>
+                                <p>Clicca il pulsante — Tampermonkey aprirà la finestra di conferma:</p>
+                                <p><a href="https://raw.githubusercontent.com/denvermotel/Cassetto_Utility/refs/heads/main/Cassetto_Utility.user.js" class="btn btn-primary" style="display:inline-flex;font-size:14px;padding:10px 20px;">➤ Installa Cassetto_Utility.user.js</a></p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-num">4</div>
+                            <div class="step-content">
+                                <h4>Accedi al Cassetto Fiscale</h4>
+                                <p>Vai su <a href="https://cassetto.agenziaentrate.gov.it" target="_blank" rel="noopener">cassetto.agenziaentrate.gov.it</a> e naviga nella sezione desiderata — la barra apparirà automaticamente.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FIREFOX -->
+                <div id="panel-firefox" class="browser-panel" role="tabpanel">
+                    <div class="steps">
+                        <div class="step">
+                            <div class="step-num">1</div>
+                            <div class="step-content">
+                                <h4>Installa Tampermonkey o Greasemonkey</h4>
+                                <p>Scegli una delle due estensioni — entrambe funzionano:</p>
+                                <p>
+                                    <a href="https://addons.mozilla.org/it/firefox/addon/tampermonkey/" target="_blank" rel="noopener">Tampermonkey per Firefox →</a><br>
+                                    <a href="https://addons.mozilla.org/it/firefox/addon/greasemonkey/" target="_blank" rel="noopener">Greasemonkey per Firefox →</a>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-num">2</div>
+                            <div class="step-content">
+                                <h4>Installa Cassetto_Utility</h4>
+                                <p>Clicca il pulsante — l'estensione aprirà la finestra di conferma (nessun passaggio aggiuntivo richiesto su Firefox):</p>
+                                <p><a href="https://raw.githubusercontent.com/denvermotel/Cassetto_Utility/refs/heads/main/Cassetto_Utility.user.js" class="btn btn-primary" style="display:inline-flex;font-size:14px;padding:10px 20px;">➤ Installa Cassetto_Utility.user.js</a></p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-num">3</div>
+                            <div class="step-content">
+                                <h4>Accedi al Cassetto Fiscale</h4>
+                                <p>Vai su <a href="https://cassetto.agenziaentrate.gov.it" target="_blank" rel="noopener">cassetto.agenziaentrate.gov.it</a> e naviga nella sezione desiderata — la barra apparirà automaticamente.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SAFARI -->
+                <div id="panel-safari" class="browser-panel" role="tabpanel">
+                    <div class="steps">
+                        <div class="step">
+                            <div class="step-num">1</div>
+                            <div class="step-content">
+                                <h4>Installa Userscripts dal Mac App Store</h4>
+                                <p>Safari utilizza l'app <strong>Userscripts</strong> (gratuita, solo Mac):</p>
+                                <p><a href="https://apps.apple.com/it/app/userscripts/id1463298887" target="_blank" rel="noopener">Userscripts — Mac App Store →</a></p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-num">2</div>
+                            <div class="step-content">
+                                <h4>Abilita l'estensione in Safari</h4>
+                                <ol style="margin:8px 0 4px 20px;font-size:14px;line-height:1.8;">
+                                    <li>Apri <strong>Safari → Impostazioni → Estensioni</strong></li>
+                                    <li>Abilita <strong>Userscripts</strong></li>
+                                    <li>Concedi l'accesso ai siti se richiesto</li>
+                                </ol>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-num">3</div>
+                            <div class="step-content">
+                                <h4>Installa Cassetto_Utility</h4>
+                                <p>Clicca il pulsante — Userscripts aprirà la finestra di conferma:</p>
+                                <p><a href="https://raw.githubusercontent.com/denvermotel/Cassetto_Utility/refs/heads/main/Cassetto_Utility.user.js" class="btn btn-primary" style="display:inline-flex;font-size:14px;padding:10px 20px;">➤ Installa Cassetto_Utility.user.js</a></p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-num">4</div>
+                            <div class="step-content">
+                                <h4>Accedi al Cassetto Fiscale</h4>
+                                <p>Vai su <a href="https://cassetto.agenziaentrate.gov.it" target="_blank" rel="noopener">cassetto.agenziaentrate.gov.it</a> e naviga nella sezione desiderata — la barra apparirà automaticamente.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
             <p style="margin-top:20px;font-size:14px;color:var(--gray-600);">⚠️ Consenti sempre i download multipli quando il browser lo chiede per <code>agenziaentrate.gov.it</code>.</p>
         </div>
@@ -185,7 +364,13 @@
             <span class="section-label">Cosa è cambiato?</span>
             <h2>📝 Changelog</h2>
             <div class="changelog-entry">
-                <div class="changelog-version">v0.07 beta <span class="changelog-tag">Latest</span></div>
+                <div class="changelog-version">v0.08 beta <span class="changelog-tag">Latest</span></div>
+                <ul class="changelog-list">
+                    <li><span class="changelog-tag new">NEW</span> Report "Dettaglio Tributi F24": legge il dettaglio di ogni F24 dell'anno e genera un Excel con una riga per codice tributo (sezione, descrizione, codice atto, importo a credito/debito separati)</li>
+                </ul>
+            </div>
+            <div class="changelog-entry">
+                <div class="changelog-version">v0.07 beta</div>
                 <ul class="changelog-list">
                     <li><span class="changelog-tag new">NEW</span> CU multi-tipo: supporto lavoro autonomo (Quadro AU) e dipendente (Quadro DB) con rilevamento automatico</li>
                     <li><span class="changelog-tag new">NEW</span> CU multi-modulo: iterazione automatica su Modulo 1…N, una riga Excel per modulo</li>
@@ -227,7 +412,7 @@
             <p><strong>Cassetto_Utility</strong> è un progetto open source distribuito sotto licenza <a href="https://www.gnu.org/licenses/gpl-3.0" target="_blank">GPL v3</a>.</p>
             <p style="margin-top:8px;font-size:13px;color:var(--gray-500);">Il software è fornito "così com'è", senza garanzie. L'utente è l'unico responsabile dell'uso che ne viene fatto.</p>
             <div class="footer-badges">
-                <img src="https://img.shields.io/badge/versione-0.07%20beta-green" alt="Versione">
+                <img src="https://img.shields.io/badge/versione-0.08%20beta-green" alt="Versione">
                 <img src="https://img.shields.io/badge/licenza-GPL%20v3-blue" alt="Licenza">
                 <img src="https://img.shields.io/badge/Tampermonkey-compatibile-brightgreen" alt="Tampermonkey">
                 <img src="https://img.shields.io/badge/Greasemonkey-compatibile-orange" alt="Greasemonkey">
@@ -235,5 +420,21 @@
             <p style="margin-top:20px;font-size:12px;"><a href="https://github.com/denvermotel/Cassetto_Utility">Codice sorgente</a> · <a href="https://github.com/denvermotel/Cassetto_Utility/issues">Segnala un problema</a> · © 2026 denvermotel</p>
         </div>
     </footer>
+
+    <script>
+        function switchBrowser(browser) {
+            document.querySelectorAll('.browser-tab').forEach(function(tab) {
+                tab.classList.remove('active');
+                tab.setAttribute('aria-selected', 'false');
+            });
+            document.querySelectorAll('.browser-panel').forEach(function(panel) {
+                panel.classList.remove('active');
+            });
+            var activeTab = document.querySelector('[aria-controls="panel-' + browser + '"]');
+            var activePanel = document.getElementById('panel-' + browser);
+            if (activeTab) { activeTab.classList.add('active'); activeTab.setAttribute('aria-selected', 'true'); }
+            if (activePanel) { activePanel.classList.add('active'); }
+        }
+    </script>
 </body>
 </html>
