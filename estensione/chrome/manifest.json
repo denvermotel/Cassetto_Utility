@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "Cassetto_Utility",
+  "version": "0.9.0",
+  "version_name": "0.09 beta",
+  "description": "Scarico massivo di F24, F23 e CU ed export in Excel dal cassetto fiscale dell'Agenzia delle Entrate.",
+  "author": "denvermotel",
+  "homepage_url": "https://denvermotel.github.io/Cassetto_Utility/",
+  "icons": {
+    "16": "icone/16.png",
+    "32": "icone/32.png",
+    "48": "icone/48.png",
+    "128": "icone/128.png"
+  },
+  "permissions": [
+    "storage"
+  ],
+  "background": {
+    "service_worker": "servizio.js"
+  },
+  "action": {
+    "default_title": "Apri il menu Cassetto_Utility",
+    "default_icon": {
+      "16": "icone/16.png",
+      "32": "icone/32.png",
+      "48": "icone/48.png",
+      "128": "icone/128.png"
+    },
+    "default_popup": "menu.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://cassetto.agenziaentrate.gov.it/*"
+      ],
+      "js": [
+        "Cassetto_Utility.user.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ]
+}

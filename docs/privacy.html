@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy - Cassetto_Utility</title>
+<meta name="description" content="Informativa privacy di Cassetto_Utility: nessun dato raccolto, trasmesso o condiviso. Tutto resta nel browser di chi lo usa.">
+<style>
+    :root {
+        --inchiostro: #22262F;
+        --ardesia: #2E3540;
+        --ardesia-chiara: #59616F;
+        --carta: #DDE1E7;
+        --carta-tenue: #9AA2AF;
+        --accento: #C9962F;
+        --accento-chiaro: #E0B152;
+        --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        --font-cifre: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+        font-family: var(--font-ui);
+        background: var(--inchiostro);
+        color: var(--carta);
+        line-height: 1.65;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    .container { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+
+    a { color: var(--accento); }
+    a:hover { color: var(--accento-chiaro); }
+
+    code {
+        font-family: var(--font-cifre);
+        font-size: 0.88em;
+        background: var(--ardesia);
+        padding: 2px 6px;
+        border-radius: 3px;
+        color: var(--carta);
+    }
+
+    header {
+        border-bottom: 1px solid var(--ardesia);
+        padding: 48px 24px 40px;
+    }
+
+    .marchio {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: var(--font-cifre);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: .12em;
+        color: var(--accento);
+        text-transform: uppercase;
+        margin-bottom: 24px;
+    }
+    .marchio a { color: var(--accento); text-decoration: none; }
+    .marchio a:hover { color: var(--accento-chiaro); }
+
+    header h1 {
+        font-size: 1.9rem;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        margin-bottom: 10px;
+    }
+
+    .aggiornamento {
+        font-family: var(--font-cifre);
+        font-size: 12.5px;
+        color: var(--carta-tenue);
+    }
+
+    .riepilogo {
+        margin-top: 24px;
+        padding: 16px 18px;
+        border-left: 2px solid var(--accento);
+        background: var(--ardesia);
+        font-size: 14.5px;
+        color: var(--carta);
+        max-width: 560px;
+    }
+
+    main { padding: 48px 0 64px; }
+
+    section { margin-bottom: 40px; }
+
+    h2 {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--carta);
+        margin-bottom: 12px;
+        letter-spacing: -0.005em;
+    }
+
+    p { margin-bottom: 12px; color: var(--carta-tenue); max-width: 620px; font-size: 14.5px; }
+    p strong { color: var(--carta); font-weight: 600; }
+
+    ul.elenco { list-style: none; max-width: 620px; }
+    ul.elenco li {
+        font-size: 14.5px; color: var(--carta-tenue);
+        padding: 5px 0 5px 18px; position: relative;
+    }
+    ul.elenco li::before {
+        content: ''; position: absolute; left: 0; top: 13px;
+        width: 5px; height: 5px; border-radius: 50%; background: var(--accento);
+    }
+
+    table.tabella {
+        width: 100%;
+        max-width: 620px;
+        border-collapse: collapse;
+        margin: 16px 0;
+        font-size: 13.5px;
+    }
+    table.tabella th {
+        text-align: left;
+        font-family: var(--font-cifre);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+        color: var(--carta-tenue);
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--ardesia-chiara);
+    }
+    table.tabella td {
+        padding: 9px 12px;
+        border-bottom: 1px solid var(--ardesia);
+        color: var(--carta-tenue);
+        vertical-align: top;
+    }
+    table.tabella tr:last-child td { border-bottom: none; }
+
+    /* La motivazione per lo store è testo tecnico rivolto a chi pubblica il
+       pacchetto, non all'utente finale: resta comunque qui per intero, perché
+       è quello che c'è in PRIVACY.md, ma con un'intestazione che ne dichiara
+       lo scopo diverso. */
+    .nota-tecnica {
+        border: 1px solid var(--ardesia);
+        border-radius: 4px;
+        padding: 20px 22px;
+    }
+
+    footer { padding: 40px 24px 56px; text-align: center; border-top: 1px solid var(--ardesia); }
+    footer p { color: var(--carta-tenue); font-size: 13px; max-width: none; margin-bottom: 0; }
+    footer .links { margin-top: 14px; font-size: 12.5px; }
+    footer .links a { color: var(--carta-tenue); text-decoration: none; }
+    footer .links a:hover { color: var(--accento); }
+    footer .separatore { color: var(--ardesia-chiara); margin: 0 8px; }
+
+    @media (max-width: 640px) {
+        header { padding: 36px 16px 32px; }
+        .container { padding: 0 16px; }
+    }
+</style>
+</head>
+<body>
+
+<header>
+    <div class="container">
+        <div class="marchio"><a href="index.html">CASSETTO·UTILITY</a></div>
+        <h1>Informativa privacy</h1>
+        <div class="aggiornamento">Ultimo aggiornamento: 9 agosto 2026</div>
+        <div class="riepilogo">
+            Cassetto_Utility non raccoglie, non trasmette e non condivide alcun dato.
+            Tutto quello che tocca resta nel browser di chi lo usa.
+        </div>
+    </div>
+</header>
+
+<main>
+    <div class="container">
+
+        <section>
+            <h2>Cosa fa lo strumento</h2>
+            <p>
+                Cassetto_Utility aggiunge una barra di comandi alle pagine di
+                <code>cassetto.agenziaentrate.gov.it</code>. Automatizza operazioni che
+                l'utente potrebbe fare a mano: aprire un versamento alla volta,
+                chiedere al cassetto il PDF che già offre, leggere le tabelle a schermo
+                e comporne un foglio di calcolo.
+            </p>
+            <p>
+                Non accede a nulla che l'utente non veda già: <strong>chiede le stesse
+                pagine e gli stessi PDF che il cassetto mette a disposizione</strong>,
+                con la sessione di chi è autenticato in quel momento.
+            </p>
+        </section>
+
+        <section>
+            <h2>Quali dati vengono trattati</h2>
+            <p>
+                Lo strumento legge dalla pagina, mentre lavora, i dati che il cassetto
+                mostra a schermo: date di versamento, protocolli, codici tributo e
+                relative descrizioni, codici atto, importi a debito e a credito, dati
+                delle certificazioni uniche e denominazione del sostituto d'imposta, e
+                il codice fiscale o la partita IVA del cassetto aperto, anche quando è
+                in delega.
+            </p>
+            <p>
+                Questi dati servono a costruire i file che l'utente scarica - i PDF e i
+                fogli di calcolo - e <strong>non escono mai dal browser</strong>: non
+                vengono inviati a nessun server, né dello sviluppatore né di terzi.
+            </p>
+        </section>
+
+        <section>
+            <h2>Cosa viene memorizzato</h2>
+            <p>
+                Soltanto le preferenze, che sono due: il <strong>tema di colori</strong>
+                della barra, e le <strong>scelte sullo scarico</strong> - se per gli F24
+                quietanzati prendere la quietanza o la copia del modello, e se chiedere
+                conferma prima dei lotti lunghi. Nelle estensioni si aggiunge la scelta
+                fra menu sull'icona e barra nella pagina.
+            </p>
+            <p>
+                Nessun elenco di documenti, nessuno storico degli scarichi, nessun dato
+                fiscale viene salvato: quello che si legge dal cassetto vive per il
+                tempo dell'operazione e finisce nel file che l'utente riceve.
+            </p>
+            <p>
+                Le preferenze stanno in <code>chrome.storage.local</code> (o
+                l'equivalente Firefox) quando Cassetto_Utility gira come estensione,
+                nello storage dello script manager quando gira come userscript. In
+                entrambi i casi restano sul dispositivo dell'utente e non vengono
+                sincronizzate con nessun servizio.
+            </p>
+            <p>Si cancellano disinstallando l'estensione.</p>
+        </section>
+
+        <section>
+            <h2>Cosa non viene fatto</h2>
+            <ul class="elenco">
+                <li>Nessuna richiesta di rete verso server dello sviluppatore o di terzi</li>
+                <li>Nessuna analisi statistica, nessun identificativo di installazione</li>
+                <li>Nessun accesso a cronologia, credenziali o dati di compilazione automatica</li>
+                <li>Nessuna lettura di siti diversi da <code>cassetto.agenziaentrate.gov.it</code></li>
+                <li>Nessun codice caricato da remoto: quello che si installa è tutto quello che viene eseguito</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Permessi richiesti e perché</h2>
+            <table class="tabella">
+                <thead><tr><th>Permesso</th><th>Motivo</th></tr></thead>
+                <tbody>
+                    <tr><td><code>storage</code></td><td>Le preferenze: tema, quietanza o copia, conferma sui lotti lunghi, come si apre lo strumento</td></tr>
+                    <tr><td>accesso a <code>cassetto.agenziaentrate.gov.it</code></td><td>È l'unico sito su cui lo strumento funziona: legge le tabelle di quelle pagine e ne chiede i PDF</td></tr>
+                </tbody>
+            </table>
+            <p>Non sono richiesti permessi di download, di rete, né l'accesso ad altri siti.</p>
+        </section>
+
+        <section>
+            <h2>Motivazione autorizzazione host</h2>
+            <div class="nota-tecnica">
+                <p style="margin-bottom:0;">
+                    L'estensione automatizza operazioni che l'utente farebbe comunque a
+                    mano sul cassetto fiscale dell'Agenzia delle Entrate: aprire in
+                    sequenza i versamenti di un anno, richiedere i PDF che il cassetto
+                    già offre, leggere i dati mostrati a schermo per comporre un foglio
+                    di calcolo. L'autorizzazione host serve solo a iniettare lo script
+                    in quelle pagine ed è limitata a quel dominio. Non viene effettuata
+                    alcuna richiesta di rete verso server esterni, non viene letto né
+                    modificato alcun sito diverso da questo, e nessun dato lascia il
+                    browser dell'utente.
+                </p>
+            </div>
+        </section>
+
+        <section>
+            <h2>Contatti</h2>
+            <p>
+                Segnalazioni e domande:
+                <a href="https://github.com/denvermotel/Cassetto_Utility/issues" target="_blank" rel="noopener">github.com/denvermotel/Cassetto_Utility/issues</a>
+            </p>
+            <p>
+                Il codice sorgente è pubblico e leggibile, senza offuscamento, con
+                licenza GPL-3.0.
+            </p>
+        </section>
+
+    </div>
+</main>
+
+<footer>
+    <div class="container">
+        <p>Cassetto_Utility non è un prodotto dell'Agenzia delle Entrate.</p>
+        <div class="links">
+            <a href="index.html">Istruzioni</a>
+            <span class="separatore">·</span>
+            <a href="https://github.com/denvermotel/Cassetto_Utility">Codice sorgente</a>
+            <span class="separatore">·</span>
+            <a href="https://github.com/denvermotel/Cassetto_Utility/issues">Segnala un problema</a>
+        </div>
+    </div>
+</footer>
+
+</body>
+</html>

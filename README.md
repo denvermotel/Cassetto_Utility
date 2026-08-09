@@ -1,125 +1,232 @@
-# 🧳 Cassetto_Utility
+# Cassetto_Utility
 
-**Toolbox per il portale cassetto.agenziaentrate.gov.it**
+Toolbox per il Cassetto Fiscale dell'Agenzia delle Entrate
+(`cassetto.agenziaentrate.gov.it`). Scarica in blocco F24, F23 e certificazioni
+uniche, e li ribalta in fogli di calcolo fino al singolo codice tributo.
+Funziona sul cassetto proprio e su quello in delega.
 
-Userscript per Tampermonkey / Greasemonkey che aggiunge una barra degli strumenti al Cassetto Fiscale dell'Agenzia delle Entrate, con download massivo F24/F23/CU e Report Excel.
+Gira come userscript sotto Tampermonkey e come estensione Chrome o Firefox:
+è lo stesso identico file.
 
-[![Version](https://img.shields.io/badge/versione-0.08%20beta-green)](#)
-[![License: GPL v3](https://img.shields.io/badge/licenza-GPL%20v3-blue)](https://www.gnu.org/licenses/gpl-3.0)
-[![Tampermonkey](https://img.shields.io/badge/Tampermonkey-compatibile-brightgreen)](https://www.tampermonkey.net/)
-[![Greasemonkey](https://img.shields.io/badge/Greasemonkey-compatibile-orange)](https://www.greasespot.net/)
+[![Versione](https://img.shields.io/badge/versione-0.09%20beta-C9962F)](CHANGELOG.md)
+[![Licenza: GPL v3](https://img.shields.io/badge/licenza-GPL%20v3-blue)](https://www.gnu.org/licenses/gpl-3.0)
 
----
-
-> ⚠️ **VERSIONE IN FASE DI SVILUPPO E TEST**
-
----
-
-## ⚡ Installazione rapida
-
-> Richiede **Tampermonkey** (Chrome/Edge/Firefox) o **Greasemonkey** (Firefox)
-
-1. Installa l'estensione del browser:
-   - [Tampermonkey per Chrome](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo)
-   - [Tampermonkey per Firefox](https://addons.mozilla.org/it/firefox/addon/tampermonkey/)
-   - [Greasemonkey per Firefox](https://addons.mozilla.org/it/firefox/addon/greasemonkey/)
-
-2. Clicca il link di installazione:
-
-   **[➤ Installa Cassetto_Utility.user.js](https://raw.githubusercontent.com/denvermotel/Cassetto_Utility/refs/heads/main/Cassetto_Utility.user.js)**
-
-3. Accedi su [cassetto.agenziaentrate.gov.it](https://cassetto.agenziaentrate.gov.it) — la barra verde apparirà automaticamente.
+Progetto gemello: [FE-Utility](https://github.com/denvermotel/fe-utility), che
+fa lo stesso mestiere sul portale Fatture e Corrispettivi. I due condividono
+impalcatura, temi e modo di confezionare le estensioni.
 
 ---
 
-## ✨ Funzionalità
+## Installazione rapida
 
-### 🧳⬇ Scarica F24/F23
-Download massivo delle quietanze/copie PDF per tutti i versamenti dell'anno selezionato.
+Richiede **Tampermonkey** (Chrome, Edge, Firefox) o **Greasemonkey** (Firefox).
+In alternativa, si attendono le estensioni sugli store: vedi in fondo.
 
-### 🧳⬇ Scarica CU
-Download massivo dei PDF di tutte le Certificazioni Uniche ricevute (`Ric=CUK`). Se le CU superano 15, viene mostrato un alert di conferma prima dell'avvio.
+1. Installa il gestore di userscript:
+   [Tampermonkey per Chrome](https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo) ·
+   [per Firefox](https://addons.mozilla.org/it/firefox/addon/tampermonkey/) ·
+   [Greasemonkey](https://addons.mozilla.org/it/firefox/addon/greasemonkey/)
 
-### 📊 Report Excel F24/F23
-File `.xls` con Elenco (dettaglio) + Riepilogo e raffronto ✅/❌/⏳.
+2. Su **Chrome ed Edge**, attiva «Consenti script utente» nei dettagli di
+   Tampermonkey (`chrome://extensions`). È obbligatorio: senza, non parte nulla
+   e non compare nessun errore. È la prima cosa da controllare quando qualcuno
+   segnala che «non funziona».
 
-### 📑 Dettaglio Tributi F24
-File `.xls` con **una riga per ogni codice tributo/causale** di tutti gli F24 dell'anno selezionato. Legge il dettaglio di ogni versamento (fetch sequenziale con barra di avanzamento) ed estrae per ciascun rigo: Data versamento, Protocollo, Sezione (Erario/INPS/INAIL/Regioni/IMU…), Codice tributo, Descrizione (dal dettaglio, dove presente), Rateazione/regione/provincia/mese rif., Anno di riferimento, Codice atto, Importo a credito e Importo a debito separati.
+3. Installa lo script:
+   **[Cassetto_Utility.user.js](https://raw.githubusercontent.com/denvermotel/Cassetto_Utility/refs/heads/main/Cassetto_Utility.user.js)**
 
-### 📊 Report Excel CU
-File `.xls` con elenco e riepilogo di tutte le CU. Per ogni certificazione vengono recuperati automaticamente i dati dal quadro pertinente:
+4. Accedi a [cassetto.agenziaentrate.gov.it](https://cassetto.agenziaentrate.gov.it):
+   la barra compare da sé.
 
-**CU Lavoro Autonomo** (Quadro AU — multi-modulo):
-- **Causale** con descrizione estesa (es. A = lavoro autonomo, M = prestazioni occasionali)
-- **Ammontare lordo corrisposto**
-- **Imponibile**
-- **Ritenute a titolo di acconto**
-
-**CU Lavoro Dipendente** (Quadro DB — multi-modulo):
-- **Redditi di lavoro dipendente e assimilati**
-- **Ritenute IRPEF**
-- **Addizionale regionale**
-- **Addizionale comunale**
-
-Per tutte le CU:
-- **Denominazione sostituto d'imposta** (dal Quadro DA, campi DA001 002 e 003)
-- **Tipo CU** (Autonomo / Dipendente / Altro) rilevato automaticamente
-- **Supporto multi-modulo**: CU con più moduli generano una riga per ciascun modulo
-- **Mappa completa causali**: 30 codici causale da normativa (A→ZO) con descrizione
-
-### 🔍 Ricerche tributi F24
-Supporto completo per la pagina "Ricerche tributi F24" (`Ric=F24Sel`):
-- **Selettore Date** (Anno/Trimestre/Mese) nel tab "Ricerca per data versamento" per compilare automaticamente i campi Dal/Al
-- **Filtro Codice Atto**: campo input nella barra per filtrare download e report per codice atto specifico. Pre-fetch del dettaglio di ogni F24 per estrarre il codice atto
-- Download batch e Report Excel dai risultati di ricerca (con colonna Codice Atto)
-
-### 🔄 Navigazione dinamica
-La barra rileva automaticamente i cambi di pagina e aggiorna i pulsanti. Dalla pagina Versamenti, pulsanti diretti per F24/F23. Dalle pagine generiche, link rapidi "Vai a CU" e "Vai a Versamenti".
-
-### 👥 Cassetto delegato
-Rilevamento automatico PIVA delegato / PIVA propria / CF con cascata di priorità.
+Istruzioni per esteso, browser per browser:
+[denvermotel.github.io/Cassetto_Utility](https://denvermotel.github.io/Cassetto_Utility/)
 
 ---
 
-## 📋 Pulsanti per contesto
+## Funzionalità
 
-| Pulsante | Contesto | Descrizione |
+I comandi disponibili dipendono dalla pagina aperta: il cassetto è un sito a
+pagine vere, e ognuna offre cose diverse.
+
+| Pagina | Comandi |
+|---|---|
+| Elenco F24 | Scarica F24, Report Excel, Dettaglio tributi, Protocolli, Riepilogo |
+| Elenco F23 | Scarica F23, Report Excel, Riepilogo |
+| Elenco CU | Scarica CU, Report Excel CU, Riepilogo |
+| Ricerca tributi F24 | Periodo; con i risultati anche Scarica F24, Report Excel, filtro per codice atto |
+| Dettaglio di un versamento | Copia del modello e, per gli F24 quietanzati, la quietanza |
+| Dettaglio CU | Genera PDF CU |
+| Altre pagine | I salti a Versamenti e Certificazioni uniche |
+
+### Scarica F24, F23 e CU
+
+Tutti i documenti dell'anno selezionato in PDF, uno dopo l'altro. Non si apre
+nessuna scheda: il file si chiede con `fetch` usando i cookie di sessione già
+presenti e si salva come blob.
+
+Per gli F24 quietanzati si scarica la quietanza, che è la prova del pagamento;
+chi archivia il modello può invertire la scelta dalle impostazioni.
+
+Un lotto avviato **non si interrompe**. Oltre i quindici documenti la barra
+chiede conferma prima di partire.
+
+I nomi dei file sono `CODICE_ANNO_MM_GG_TIPO_idxN.pdf`, così ordinandoli per
+nome si ordinano per data.
+
+### Dettaglio tributi F24
+
+Il report che il cassetto non offre. Legge il dettaglio di ogni F24 dell'anno e
+produce un foglio con **una riga per codice tributo**:
+
+| Colonna | Da dove |
+|---|---|
+| Data versamento, Protocollo | Elenco |
+| Sezione (Erario, INPS, INAIL, Regioni, IMU…) | Dettaglio |
+| Codice tributo, Descrizione | Dettaglio |
+| Rateazione, regione o provincia, mese di riferimento | Dettaglio |
+| Anno di riferimento | Dettaglio |
+| Codice atto | Dettaglio |
+| Importo a credito e a debito, in colonne separate | Dettaglio |
+
+È una lettura per documento, quindi è la funzione lenta: un anno con sessanta
+F24 sono sessanta richieste.
+
+### Report Excel F24, F23 e ricerca
+
+Due fogli: l'elenco dei versamenti con lo stato di ogni scarico, e un
+riepilogo. Serve al riscontro fra quello che il cassetto dichiara e quello che
+è finito sul disco.
+
+Le colonne d'importo sono numeri veri, non testo: si sommano in Excel senza
+conversioni. La conversione è prudente - un valore che non si riconosce come
+importo resta scritto com'era invece di diventare uno zero, e una casella vuota
+sul modello resta vuota nel foglio.
+
+### Report Excel CU
+
+Una riga per ogni modulo di ogni certificazione, con il quadro riconosciuto
+automaticamente:
+
+| Tipo | Quadro | Colonne |
 |---|---|---|
-| 🧳⬇ **Scarica F24** | Lista F24 / Ricerca F24 | Quietanza PDF o Copia F24 (fallback) |
-| 🧳⬇ **Scarica F23** | Lista F23 | Copia PDF modello F23 |
-| 🧳⬇ **Scarica CU** | Lista CU | Download massivo PDF CU via POST (alert se > 15) |
-| 📊 **Report Excel** | Lista F24/F23 / Ricerca F24 | `.xls` con Elenco + Riepilogo |
-| 📑 **Dettaglio Tributi** | Lista F24 | `.xls` con una riga per codice tributo (sezione, descrizione, codice atto, credito/debito) |
-| 📊 **Report Excel CU** | Lista CU | `.xls` con denominazione sostituto + importi da Quadro AU |
-| 📋 **Protocolli** | Lista F24 | Copia data + protocollo in clipboard |
-| 📅 **Selettore Date** | Ricerche tributi F24 | Anno/Trimestre/Mese → compila Dal/Al |
-| 🎯 **Cod.Atto** (input) | Ricerche tributi F24 | Filtra download/report per codice atto |
-| 🧳⬇ **Genera PDF CU** | Dettaglio CU | Download PDF singola CU |
-| 🧳⬇ **Copia F24** | Dettaglio F24 | PDF copia modello F24 |
-| 🧳⬇ **Quietanza** | Dettaglio F24 | Quietanza AdE |
-| 🧳⬇ **Copia F23** | Dettaglio F23 | PDF copia modello F23 |
-| 📄 **Vai a CU** / ⚠ **Vai a Versamenti** | Pagine generiche | Link di navigazione rapida |
+| Lavoro autonomo | AU | Causale con descrizione per esteso, ammontare lordo, imponibile, ritenute d'acconto |
+| Lavoro dipendente | DB | Redditi, ritenute IRPEF, addizionale regionale, addizionale comunale |
+| Altro | — | Una riga, senza importi |
+
+Per tutte: la denominazione del sostituto d'imposta, letta dal quadro DA. Le
+causali sono la tabella completa da normativa, trenta codici da `A` a `ZO`.
+
+### Ricerca per codice atto
+
+Nella pagina delle ricerche tributi, un campo nella barra. Se valorizzato, il
+codice atto di ogni risultato viene letto dal dettaglio e download e report si
+limitano a quelli che corrispondono.
+
+### Selettore del periodo
+
+Compare nel form di ricerca del cassetto: anno e trimestre o mese, e le due
+date si compilano da sole. L'ultimo giorno del periodo è calcolato, non
+scritto: febbraio e gli anni bisestili vengono giusti, e un periodo che
+finirebbe nel futuro si ferma a oggi.
+
+### Impostazioni
+
+Dal pannello che si apre con l'ingranaggio nella barra.
+
+| Preferenza | |
+|---|---|
+| Quietanza o copia | Per gli F24 quietanzati, quale dei due scaricare |
+| Conferma sui lotti lunghi | La domanda oltre i quindici documenti |
+| Come aprire lo strumento | Solo come estensione: menu sull'icona o barra nella pagina |
+
+| Tema | |
+|---|---|
+| Ardesia e ottone | Predefinito. Fondo freddo, accento caldo: la distanza maggiore dal blu del cassetto |
+| Notte nordica e ottanio | Tinte desaturate, per le sessioni lunghe |
+| Blu notte e ambra | Vicino ai gestionali contabili |
+| Grafite e menta | Il più sobrio, ed è quello di FE-Utility |
 
 ---
 
-## 🔧 Note tecniche
+## Note tecniche
 
-- Storage: `GM_setValue`/`GM_getValue` con fallback `localStorage`
-- Monitoraggio URL ogni 500ms per aggiornamento dinamico pulsanti
-- Download invisibile: fetch+blob con `<a download>` nascosto (nessuna tab aperta)
-- CU PDF: generato via POST (`Ric=CUK, Anno, Protocollo, stampa=P, Fascicoli=SI, TipoStampa=C`)
-- CU denominazione: fetch del Quadro DA con parsing HTML (campi DA001 002 e 003)
-- CU importi autonomo: fetch del Quadro AU multi-modulo (Modulo=1…N) con parsing HTML
-- CU importi dipendente: fetch del Quadro DB multi-modulo con parsing HTML
-- CU causali: mappa completa di 30 codici causale da normativa (A→ZO)
-- F24 codice atto: fetch pagina dettaglio con regex `codice atto <b>VALORE</b>`
-- F24 quietanza: disponibile solo post 01/10/2006
-- Excel: Foglio 1 = Elenco (dettaglio), Foglio 2 = Riepilogo
-- Delay tra download: 600ms (F24/F23), 800ms (CU)
-- Privacy: opera solo nel dominio `cassetto.agenziaentrate.gov.it`
+Il cassetto è un sito a pagine vere servite da una servlet, non
+un'applicazione a vista singola: ogni documento è una richiesta, e non esiste
+una via breve per averli tutti insieme.
+
+Non si toccano interfacce interne per ottenere dati che il cassetto non mostri
+già: si leggono le stesse pagine che vedrebbe una persona. Uno script che si
+appoggia a endpoint non documentati si rompe in silenzio dopo un aggiornamento
+lato Agenzia; uno che legge il DOM si rompe in modo visibile.
+
+Le preferenze stanno in locale e non escono mai dal browser: `GM_setValue`
+sotto Tampermonkey, `chrome.storage.local` nelle estensioni, `localStorage`
+come ripiego. Un'unica interfaccia sopra i tre, con letture sincrone da cache e
+scritture accorpate. Dettagli in [`docs/privacy.html`](docs/privacy.html).
+
+Nessun font esterno e nessuna dipendenza a runtime: la CSP del cassetto li
+bloccherebbe comunque.
+
+### Compatibilità browser
+
+| Browser | Gestore | Stato |
+|---|---|---|
+| Chrome, Chromium, Edge | Tampermonkey | Funzionante (richiede «Consenti script utente») |
+| Firefox | Tampermonkey | Funzionante |
+| Safari | Userscripts (Mac App Store) | Non collaudato sulla 0.09 |
+| Firefox | Greasemonkey 4 | Non collaudato |
 
 ---
 
-## 📄 Licenza
+## Estensioni Chrome e Firefox
 
-[GPL-3.0](LICENSE)
+Lo stesso sorgente dello userscript, confezionato per i due store. Nessun
+passaggio manuale di attivazione: si installa e basta.
+
+L'icona apre un menu con i salti alle sezioni del cassetto e le impostazioni.
+Gli scarichi e i report restano nella barra, e non è una dimenticanza: quei
+comandi cambiano da pagina a pagina, e un elenco di pulsanti per metà spenti
+direbbe meno di una barra che mostra solo quelli che in quel momento
+funzionano.
+
+A differenza di FE-Utility, il content script gira nel **mondo isolato**: qui
+non serve leggere variabili della pagina, quindi `chrome.storage` si raggiunge
+direttamente e il ponte su `postMessage` che il gemello è costretto ad avere
+non esiste.
+
+Per confezionare i pacchetti:
+
+```bash
+./estensione/pacchetto.sh
+```
+
+Copia i file comuni nelle due cartelle, produce gli zip e avverte se la
+versione dei manifest non corrisponde a quella dello script.
+
+Per provarle senza pubblicarle:
+
+- **Chrome** — `chrome://extensions`, Modalità sviluppatore, Carica estensione
+  non pacchettizzata, cartella `estensione/chrome`
+- **Firefox** — `about:debugging`, Questo Firefox, Carica componente
+  aggiuntivo temporaneo, file `estensione/firefox/manifest.json`
+
+---
+
+## Verifiche
+
+Il cassetto richiede SPID o CNS, quindi non è automatizzabile: non esistono
+prove funzionali. Prima di ogni rilascio gira una suite di controlli statici,
+che tiene insieme le cose che si scoprirebbero altrimenti tardi - versioni
+disallineate fra script e manifest, requisiti degli store, comandi del menu che
+nessuno raccoglie, conversione degli importi, contrasti di colore sotto soglia.
+
+Non è distribuita con il pacchetto: vive nello spazio di lavoro insieme alle
+pagine del cassetto salvate per le prove, che contengono dati fiscali veri e
+non possono finire in un repository pubblico.
+
+---
+
+## Licenza
+
+[GPL-3.0](LICENSE). Fornito così com'è, senza garanzie.
+Non è un prodotto dell'Agenzia delle Entrate.

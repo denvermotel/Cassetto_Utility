@@ -1,0 +1,53 @@
+# Si versiona solo ciò che serve a installare e mantenere lo strumento.
+# Tutto il resto è escluso in partenza, così niente entra per distrazione:
+# "salvataggio pagine in html/" contiene pagine del cassetto salvate dal
+# browser, cioè partite IVA, protocolli e importi reali, e quello che finisce
+# nella cronologia git non si toglie più cancellando il file dopo.
+
+# Escludi tutto
+*
+
+# Poi riammetti i file di rilascio, uno per uno.
+# La barra iniziale li ancora alla radice: senza, "Cassetto_Utility.user.js"
+# riammetterebbe anche le copie che pacchetto.sh lascia nelle cartelle delle
+# estensioni.
+!/.gitignore
+!/README.md
+!/CHANGELOG.md
+!/Cassetto_Utility.user.js
+!/LICENSE
+
+# Pagine pubblicate su GitHub Pages.
+!/docs/
+!/docs/index.html
+!/docs/privacy.html
+
+# Estensioni: il sorgente condiviso e i due manifest, nient'altro.
+# Dentro estensione/chrome e estensione/firefox finiscono anche le copie
+# prodotte da pacchetto.sh (userscript, menu, servizio, icone) e i pacchetti
+# .zip: sono duplicati di quello che sta in comune/ e si rigenerano con un
+# comando, quindi non vanno versionati.
+!estensione/
+!estensione/pacchetto.sh
+!estensione/comune/
+!estensione/comune/**
+!estensione/chrome/
+!estensione/chrome/manifest.json
+!estensione/firefox/
+!estensione/firefox/manifest.json
+
+# Fuori dal repository, di proposito:
+#   progetto.md                  appunti di lavoro
+#   salvataggio pagine in html/  dati
+#   test/                        vedi sotto
+#
+# test/ contiene un solo file, esegui.mjs, e nessun dato personale: se un
+# giorno lo si vuole pubblicare - per permettere a chiunque di verificare un
+# rilascio - bastano queste due righe.
+# !test/
+# !test/esegui.mjs
+
+# Rumore di sistema e di strumenti, in ogni caso
+.DS_Store
+Thumbs.db
+.claude/

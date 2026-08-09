@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Cassetto_Utility</title>
+<style>
+  /* I colori arrivano da menu.js, che li scrive come variabili sull'elemento
+     radice: qui si usano solo i nomi, così cambiare tema non tocca lo stile. */
+  :root {
+    --inchiostro: #22262F;
+    --ardesia: #2E3540;
+    --ardesia-chiara: #59616F;
+    --carta: #DDE1E7;
+    --carta-tenue: #9AA2AF;
+    --accento: #C9962F;
+    --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --font-cifre: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    width: 320px;
+    margin: 0;
+    padding: 0;
+    background: var(--inchiostro);
+    color: var(--carta);
+    font-family: var(--font-ui);
+    font-size: 12px;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--ardesia);
+  }
+  .marchio {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .10em;
+    color: var(--accento);
+  }
+  .versione { font-family: var(--font-cifre); font-size: 10px; color: var(--carta-tenue); }
+
+  .avviso {
+    margin: 10px 12px;
+    padding: 8px 10px;
+    border-left: 2px solid var(--accento);
+    background: var(--ardesia);
+    font-size: 11px;
+    color: var(--carta-tenue);
+    line-height: 1.45;
+  }
+
+  section { padding: 10px 12px; }
+  section + section { border-top: 1px solid var(--ardesia); }
+
+  h2 {
+    margin: 0 0 8px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--accento);
+  }
+
+  .comandi { display: flex; flex-direction: column; gap: 6px; }
+
+  button {
+    font-family: var(--font-ui);
+    cursor: pointer;
+    border-radius: 2px;
+    border: 1px solid transparent;
+    transition: border-color .15s, background .15s;
+  }
+  button:focus-visible { outline: 2px solid var(--accento); outline-offset: 2px; }
+  button:disabled { opacity: .35; cursor: default; }
+
+  .comando {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 9px 11px;
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--ardesia);
+    color: var(--carta);
+  }
+  .comando:hover:not(:disabled) { border-color: var(--accento); }
+  .comando.primario { background: var(--accento); color: var(--inchiostro); }
+  .comando .sotto {
+    display: block;
+    font-weight: 400;
+    font-size: 10px;
+    color: var(--carta-tenue);
+    margin-top: 2px;
+  }
+  .comando.primario .sotto { color: rgba(0, 0, 0, .65); }
+
+  /* Opzioni: casella di spunta, colore e parola dicono lo stesso stato */
+  .opzione {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    width: 100%;
+    text-align: left;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    background: transparent;
+    border-color: var(--ardesia-chiara);
+    color: var(--carta);
+  }
+  .opzione:hover { border-color: var(--accento); }
+  .casella {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 17px;
+    height: 17px;
+    margin-top: 1px;
+    border-radius: 3px;
+    background: transparent;
+    border: 2px solid var(--ardesia-chiara);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    color: transparent;
+    transition: background .15s, border-color .15s;
+  }
+  .opzione[aria-checked="true"] { border-color: var(--accento); background: var(--ardesia); }
+  .opzione[aria-checked="true"] .casella {
+    background: var(--accento);
+    border-color: var(--accento);
+    color: var(--inchiostro);
+  }
+  .nome { display: block; font-size: 11px; font-weight: 600; }
+  .stato {
+    display: inline-block;
+    margin-left: 6px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--carta-tenue);
+  }
+  .opzione[aria-checked="true"] .stato { color: var(--accento); }
+  .nota { display: block; font-size: 10px; color: var(--carta-tenue); margin-top: 2px; line-height: 1.4; }
+
+  .scelte { display: flex; flex-wrap: wrap; gap: 6px; }
+  .scelta {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 9px;
+    background: transparent;
+    border-color: var(--ardesia-chiara);
+    color: var(--carta);
+    font-size: 11px;
+  }
+  .scelta:hover { border-color: var(--accento); }
+  .scelta[aria-checked="true"] { border-color: var(--accento); background: var(--ardesia); }
+  .campione { display: flex; width: 40px; height: 16px; border-radius: 2px; overflow: hidden; flex-shrink: 0; }
+  .campione span { flex: 1 1 0; height: 100%; }
+
+  footer {
+    padding: 9px 12px;
+    border-top: 1px solid var(--ardesia);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  footer a { color: var(--carta-tenue); font-size: 10px; text-decoration: none; }
+  footer a:hover { color: var(--accento); }
+
+  details > summary {
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--accento);
+    list-style: none;
+    margin-bottom: 8px;
+  }
+  details > summary::-webkit-details-marker { display: none; }
+  details > summary::before { content: "▸ "; }
+  details[open] > summary::before { content: "▾ "; }
+
+  @media (prefers-reduced-motion: reduce) {
+    button, .casella { transition: none; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <span class="marchio">CASSETTO·UTILITY</span>
+    <span class="versione" id="versione"></span>
+  </header>
+
+  <div class="avviso" id="avviso" hidden></div>
+
+  <section id="sezioneComandi">
+    <h2>Dove andare</h2>
+    <div class="comandi">
+      <button class="comando primario" data-comando="mostraBarra">
+        Mostra la barra
+        <span class="sotto">I comandi della pagina aperta</span>
+      </button>
+      <button class="comando" data-comando="goToVers">
+        Versamenti
+        <span class="sotto">L'elenco per anno di F24 e F23</span>
+      </button>
+      <button class="comando" data-comando="goToF24">
+        Modelli F24
+        <span class="sotto">Scarico massivo e report</span>
+      </button>
+      <button class="comando" data-comando="goToF23">
+        Modelli F23
+        <span class="sotto">Scarico massivo e report</span>
+      </button>
+      <button class="comando" data-comando="goToCU">
+        Certificazioni uniche
+        <span class="sotto">PDF e report per quadro</span>
+      </button>
+    </div>
+  </section>
+
+  <section>
+    <p class="nota" style="margin:0 0 4px">
+      Scarichi e report dipendono da quale pagina del cassetto è aperta:
+      stanno nella barra, dove il contesto si vede.
+    </p>
+  </section>
+
+  <section>
+    <details id="impostazioni">
+      <summary>Impostazioni</summary>
+
+      <h2>Come scaricare</h2>
+      <div id="opzioniScarico"></div>
+
+      <h2>Come aprire lo strumento</h2>
+      <div class="scelte" id="apertura" role="radiogroup" aria-label="Come aprire lo strumento"></div>
+
+      <h2>Tema</h2>
+      <div class="scelte" id="temi" role="radiogroup" aria-label="Tema"></div>
+    </details>
+  </section>
+
+  <footer>
+    <a href="https://denvermotel.github.io/Cassetto_Utility/" target="_blank" rel="noopener noreferrer">Istruzioni</a>
+    <a href="https://github.com/denvermotel/Cassetto_Utility/issues" target="_blank" rel="noopener noreferrer">Segnala un problema</a>
+  </footer>
+
+  <script src="menu.js"></script>
+</body>
+</html>

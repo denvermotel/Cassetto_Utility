@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cassetto_Utility - Toolbox per il cassetto fiscale</title>
+<meta name="description" content="Userscript ed estensione per cassetto.agenziaentrate.gov.it: scarico massivo di F24, F23 e CU, report Excel per codice tributo, cassetto proprio e delegato. Nessun dato lascia il browser.">
+<style>
+    /* Palette: Ardesia e ottone, il tema di partenza dello strumento.
+       Le altre tre sono le stesse di FE-Utility, che è il progetto gemello. */
+    :root {
+        --inchiostro: #22262F;
+        --ardesia: #2E3540;
+        --ardesia-chiara: #59616F;
+        --carta: #DDE1E7;
+        --carta-tenue: #9AA2AF;
+        --accento: #C9962F;
+        --accento-chiaro: #E0B152;
+        --riuscito: #59916B;
+        --avviso: #D9A441;
+        --errore: #D26358;
+        --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        --font-cifre: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+        font-family: var(--font-ui);
+        background: var(--inchiostro);
+        color: var(--carta);
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    .container { max-width: 860px; margin: 0 auto; padding: 0 24px; }
+
+    a { color: var(--accento); }
+    a:hover { color: var(--accento-chiaro); }
+
+    code {
+        font-family: var(--font-cifre);
+        font-size: 0.88em;
+        background: var(--ardesia);
+        padding: 2px 6px;
+        border-radius: 3px;
+        color: var(--carta);
+    }
+
+    kbd {
+        display: inline-block;
+        font-family: var(--font-cifre);
+        font-size: 12px;
+        background: var(--ardesia);
+        border: 1px solid var(--ardesia-chiara);
+        border-radius: 3px;
+        padding: 2px 7px;
+        color: var(--carta);
+    }
+
+    .modello {
+        display: grid;
+        gap: 6px;
+    }
+    .sezione-modello {
+        display: grid;
+        grid-template-columns: 74px 1fr auto;
+        align-items: center;
+        gap: 10px;
+    }
+    .sezione-modello .nome-sezione {
+        font-family: var(--font-cifre);
+        font-size: 9.5px;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        color: var(--carta-tenue);
+        white-space: nowrap;
+    }
+    .righi { display: flex; gap: 2px; height: 9px; }
+    .righi span {
+        display: block;
+        height: 100%;
+        background: var(--ardesia-chiara);
+        border-radius: 1px;
+    }
+    .righi span.debito { background: var(--accento); }
+    .righi span.credito { background: var(--riuscito); }
+    .sezione-modello .importo {
+        font-family: var(--font-cifre);
+        font-size: 10px;
+        color: var(--carta-tenue);
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+
+    /* ─── TESTATA ───────────────────────────────────────────────── */
+    header.hero {
+        border-bottom: 1px solid var(--ardesia);
+        padding: 56px 24px 0;
+    }
+
+    .marchio {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: var(--font-cifre);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: .12em;
+        color: var(--accento);
+        text-transform: uppercase;
+        margin-bottom: 28px;
+    }
+    .marchio .versione {
+        color: var(--carta-tenue);
+        font-weight: 400;
+        letter-spacing: normal;
+        text-transform: none;
+    }
+
+    .hero h1 {
+        font-size: clamp(1.9rem, 4.4vw, 2.7rem);
+        font-weight: 700;
+        line-height: 1.2;
+        letter-spacing: -0.01em;
+        margin-bottom: 14px;
+        max-width: 640px;
+    }
+
+    .hero p.tesi {
+        font-size: 1.05rem;
+        color: var(--carta-tenue);
+        max-width: 580px;
+        margin-bottom: 32px;
+    }
+
+    .azioni {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 40px;
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 11px 20px;
+        border-radius: 3px;
+        font-family: var(--font-ui);
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: border-color .15s, background .15s;
+    }
+    .btn-primario { background: var(--accento); color: var(--inchiostro); }
+    .btn-primario:hover { background: var(--accento-chiaro); color: var(--inchiostro); }
+    .btn-quieto {
+        background: transparent; color: var(--carta);
+        border-color: var(--ardesia-chiara);
+    }
+    .btn-quieto:hover { border-color: var(--accento); color: var(--carta); }
+    .btn[aria-disabled="true"] {
+        background: transparent; color: var(--carta-tenue);
+        border-color: var(--ardesia); cursor: default; pointer-events: none;
+    }
+
+    /* Anteprima della barra: stesso markup concettuale del prodotto reale */
+    .anteprima-barra {
+        max-width: 820px;
+        margin: 0 auto;
+        transform: translateY(1px);
+    }
+    .barra-mock {
+        background: var(--inchiostro);
+        border: 1px solid var(--ardesia);
+        border-bottom: none;
+        border-radius: 6px 6px 0 0;
+        padding: 9px 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 11px;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+    .barra-mock .logo {
+        font-family: var(--font-cifre);
+        font-weight: 700;
+        letter-spacing: .08em;
+        color: var(--accento);
+        margin-right: 8px;
+    }
+    .barra-mock .distintivo {
+        font-family: var(--font-cifre);
+        font-size: 10px;
+        color: var(--accento);
+        border: 1px solid var(--accento);
+        border-radius: 2px;
+        padding: 2px 7px;
+    }
+    .barra-mock .etichetta-doc {
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: .09em;
+        text-transform: uppercase;
+        background: var(--ardesia);
+        color: var(--carta);
+        padding: 3px 7px;
+        border-radius: 2px;
+    }
+    .barra-mock .pulsante {
+        padding: 6px 11px;
+        border-radius: 2px;
+        font-weight: 600;
+        font-size: 10px;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+    }
+    .barra-mock .pulsante.primario { background: var(--accento); color: var(--inchiostro); }
+    .barra-mock .pulsante.azione { background: var(--ardesia); color: var(--carta); }
+    .barra-mock .pulsante.quieto {
+        background: transparent; color: var(--carta-tenue);
+        border: 1px solid var(--ardesia-chiara);
+    }
+    .barra-mock .distanziatore { flex: 1 1 auto; min-width: 8px; }
+    .barra-mock .tondo {
+        width: 22px; height: 22px; border-radius: 2px;
+        border: 1px solid var(--ardesia);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 11px; color: var(--carta-tenue); flex-shrink: 0;
+    }
+    .riga-stato {
+        background: var(--ardesia);
+        border: 1px solid var(--ardesia);
+        border-radius: 0 0 6px 6px;
+        padding: 12px 16px 14px;
+    }
+    .riga-stato .testo {
+        font-family: var(--font-cifre);
+        font-size: 10.5px;
+        color: var(--carta-tenue);
+        margin-top: 10px;
+        display: block;
+    }
+    .didascalia {
+        text-align: center;
+        font-size: 12px;
+        color: var(--carta-tenue);
+        margin: 14px 0 0;
+        padding-bottom: 8px;
+    }
+
+    /* ─── SEZIONI ───────────────────────────────────────────────── */
+    section { padding: 64px 0; border-bottom: 1px solid var(--ardesia); }
+    section:last-of-type { border-bottom: none; }
+
+    .etichetta {
+        display: inline-block;
+        font-family: var(--font-cifre);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: .11em;
+        text-transform: uppercase;
+        color: var(--accento);
+        margin-bottom: 14px;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--carta);
+        margin-bottom: 12px;
+        letter-spacing: -0.005em;
+    }
+
+    h3 {
+        font-size: 1.02rem;
+        font-weight: 600;
+        color: var(--carta);
+        margin: 28px 0 8px;
+    }
+    h3:first-of-type { margin-top: 20px; }
+
+    p { margin-bottom: 14px; color: var(--carta-tenue); max-width: 640px; }
+    p strong { color: var(--carta); font-weight: 600; }
+
+    /* ─── PASSI DI INSTALLAZIONE ─────────────────────────────────── */
+    .schede-browser { display: flex; gap: 6px; flex-wrap: wrap; margin: 20px 0 0; }
+    .scheda-browser {
+        padding: 8px 16px;
+        border-radius: 3px 3px 0 0;
+        border: 1px solid var(--ardesia);
+        border-bottom: none;
+        background: var(--ardesia);
+        color: var(--carta-tenue);
+        font-family: var(--font-ui);
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    .scheda-browser:hover { color: var(--carta); }
+    .scheda-browser[aria-selected="true"] { background: var(--inchiostro); color: var(--accento); }
+    .pannelli-browser { border: 1px solid var(--ardesia); border-radius: 0 3px 3px 3px; padding: 24px; }
+    .pannello-browser { display: none; }
+    .pannello-browser.attivo { display: block; }
+
+    .passi { display: grid; gap: 14px; margin-top: 6px; }
+    .passo { display: flex; gap: 14px; }
+    .passo .numero {
+        flex-shrink: 0;
+        width: 26px; height: 26px;
+        background: var(--ardesia);
+        border: 1px solid var(--ardesia-chiara);
+        border-radius: 3px;
+        display: flex; align-items: center; justify-content: center;
+        font-family: var(--font-cifre);
+        font-weight: 700; font-size: 12px; color: var(--accento);
+    }
+    .passo h4 { font-size: 14px; font-weight: 600; color: var(--carta); margin-bottom: 3px; }
+    .passo p { font-size: 13.5px; margin-bottom: 6px; }
+    .passo ol { margin: 6px 0 4px 18px; font-size: 13px; color: var(--carta-tenue); line-height: 1.8; }
+    .passo ol strong { color: var(--carta); }
+
+    /* ─── CARTE FUNZIONALITÀ ─────────────────────────────────────── */
+    .griglia-funzioni {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 1px;
+        background: var(--ardesia);
+        margin-top: 20px;
+        border: 1px solid var(--ardesia);
+    }
+    .carta-funzione { background: var(--inchiostro); padding: 22px; }
+    .carta-funzione h4 { font-size: 14px; font-weight: 600; color: var(--carta); margin-bottom: 6px; }
+    .carta-funzione p { font-size: 13px; color: var(--carta-tenue); margin-bottom: 0; }
+
+    /* ─── TABELLE ──────────────────────────────────────────────── */
+    table.tabella {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 16px;
+        font-size: 13px;
+    }
+    table.tabella th {
+        text-align: left;
+        font-family: var(--font-cifre);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+        color: var(--carta-tenue);
+        padding: 8px 14px;
+        border-bottom: 1px solid var(--ardesia-chiara);
+    }
+    table.tabella td {
+        padding: 9px 14px;
+        border-bottom: 1px solid var(--ardesia);
+        color: var(--carta-tenue);
+        vertical-align: top;
+    }
+    table.tabella td strong { color: var(--carta); }
+    table.tabella tr:last-child td { border-bottom: none; }
+    .scorre { overflow-x: auto; }
+
+    /* ─── TEMI: campioni colore ──────────────────────────────────── */
+    .griglia-temi { display: grid; gap: 10px; margin-top: 20px; }
+    .campione-tema {
+        display: flex; align-items: center; gap: 12px;
+        border: 1px solid var(--ardesia); border-radius: 3px; padding: 12px 16px;
+    }
+    .campione-tema .pastiglie { display: flex; width: 48px; height: 20px; border-radius: 2px; overflow: hidden; flex-shrink: 0; }
+    .campione-tema .pastiglie span { flex: 1 1 0; height: 100%; }
+    .campione-tema .nome { font-size: 13.5px; font-weight: 600; color: var(--carta); }
+    .campione-tema .nota { font-size: 12.5px; color: var(--carta-tenue); }
+
+    /* ─── ESTENSIONI: pulsanti store ──────────────────────────────── */
+    .carte-store { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 20px; }
+    .carta-store {
+        border: 1px solid var(--ardesia); border-radius: 4px; padding: 20px;
+        display: flex; flex-direction: column; gap: 10px;
+    }
+    .carta-store h4 { font-size: 14px; color: var(--carta); }
+    .carta-store p { font-size: 12.5px; margin-bottom: 0; }
+    .badge-attesa {
+        display: inline-block; align-self: flex-start;
+        font-family: var(--font-cifre); font-size: 10px; letter-spacing: .05em;
+        text-transform: uppercase; color: var(--carta-tenue);
+        border: 1px solid var(--ardesia-chiara); border-radius: 2px; padding: 3px 8px;
+    }
+
+    /* ─── CHANGELOG ─────────────────────────────────────────────── */
+    .voce-changelog { padding: 18px 0; border-top: 1px solid var(--ardesia); }
+    .voce-changelog:first-of-type { border-top: none; padding-top: 8px; }
+    .intestazione-changelog {
+        display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px;
+        font-family: var(--font-cifre); font-size: 14px; font-weight: 700; color: var(--carta);
+    }
+    .tag-attuale {
+        font-family: var(--font-ui); font-size: 10px; font-weight: 700;
+        letter-spacing: .06em; text-transform: uppercase;
+        background: var(--accento); color: var(--inchiostro);
+        padding: 2px 8px; border-radius: 2px;
+    }
+    ul.elenco-changelog { list-style: none; }
+    ul.elenco-changelog li {
+        font-size: 13.5px; color: var(--carta-tenue);
+        padding: 4px 0 4px 16px; position: relative;
+    }
+    ul.elenco-changelog li::before {
+        content: ''; position: absolute; left: 0; top: 12px;
+        width: 5px; height: 5px; border-radius: 50%; background: var(--accento);
+    }
+
+    /* ─── AVVERTENZA ────────────────────────────────────────────── */
+    .avvertenza {
+        border-left: 2px solid var(--avviso);
+        background: var(--ardesia);
+        padding: 14px 18px;
+        margin-top: 20px;
+        border-radius: 0 3px 3px 0;
+    }
+    .avvertenza p { margin-bottom: 0; font-size: 13.5px; }
+
+    /* ─── PIÈ DI PAGINA ─────────────────────────────────────────── */
+    footer { padding: 40px 24px 56px; text-align: center; }
+    footer p { color: var(--carta-tenue); font-size: 13px; max-width: none; }
+    footer .links { margin-top: 14px; font-size: 12.5px; }
+    footer .links a { color: var(--carta-tenue); text-decoration: none; }
+    footer .links a:hover { color: var(--accento); }
+    footer .separatore { color: var(--ardesia-chiara); margin: 0 8px; }
+
+    @media (prefers-reduced-motion: reduce) {
+        html { scroll-behavior: auto; }
+        .btn, .scheda-browser { transition: none; }
+    }
+
+    @media (max-width: 640px) {
+        header.hero { padding: 40px 16px 0; }
+        .container { padding: 0 16px; }
+        .azioni { flex-direction: column; align-items: stretch; }
+        .btn { justify-content: center; }
+        section { padding: 44px 0; }
+        .barra-mock { font-size: 10px; }
+        .sezione-modello { grid-template-columns: 62px 1fr; }
+        .sezione-modello .importo { display: none; }
+    }
+</style>
+</head>
+<body>
+
+<header class="hero">
+    <div class="container">
+        <div class="marchio">CASSETTO·UTILITY <span class="versione">0.09 beta</span></div>
+        <h1>Toolbox per il Cassetto Fiscale</h1>
+        <p class="tesi">
+            Userscript ed estensione per il cassetto fiscale dell'Agenzia delle Entrate.
+            Scarica in blocco F24, F23 e certificazioni uniche, e li ribalta in fogli
+            di calcolo fino al singolo codice tributo. Cassetto proprio e delegato.
+            Nessun dato lascia il browser.
+        </p>
+        <div class="azioni">
+            <a class="btn btn-primario" href="https://raw.githubusercontent.com/denvermotel/Cassetto_Utility/refs/heads/main/Cassetto_Utility.user.js">
+                Installa lo userscript
+            </a>
+            <a class="btn btn-quieto" href="#estensioni">Estensioni Chrome e Firefox</a>
+            <a class="btn btn-quieto" href="https://github.com/denvermotel/Cassetto_Utility" target="_blank" rel="noopener">
+                Codice sorgente
+            </a>
+        </div>
+    </div>
+
+    <div class="anteprima-barra">
+        <div class="barra-mock" role="img" aria-label="Anteprima della barra sulla pagina dell'elenco F24">
+            <span class="logo">CASSETTO·UTILITY</span>
+            <span class="distintivo">delega 01234567890</span>
+            <span class="etichetta-doc">F24</span>
+            <span class="pulsante primario">Scarica F24</span>
+            <span class="pulsante azione">Report Excel</span>
+            <span class="pulsante azione">Dettaglio tributi</span>
+            <span class="pulsante quieto">Riepilogo</span>
+            <span class="distanziatore"></span>
+            <span class="tondo">&#9881;</span>
+            <span class="tondo">?</span>
+        </div>
+        <div class="riga-stato">
+            <div class="modello" role="img" aria-label="Un modello F24 scomposto nelle sue sezioni: Erario, INPS, Regioni, Altri enti, con i righi a debito e a credito">
+                <div class="sezione-modello">
+                    <span class="nome-sezione">Erario</span>
+                    <span class="righi">
+                        <span class="debito" style="width:74px"></span>
+                        <span class="debito" style="width:52px"></span>
+                        <span class="credito" style="width:38px"></span>
+                        <span class="debito" style="width:21px"></span>
+                    </span>
+                    <span class="importo">4.912,00</span>
+                </div>
+                <div class="sezione-modello">
+                    <span class="nome-sezione">INPS</span>
+                    <span class="righi">
+                        <span class="debito" style="width:61px"></span>
+                        <span class="debito" style="width:29px"></span>
+                    </span>
+                    <span class="importo">2.184,55</span>
+                </div>
+                <div class="sezione-modello">
+                    <span class="nome-sezione">Regioni</span>
+                    <span class="righi">
+                        <span class="debito" style="width:33px"></span>
+                    </span>
+                    <span class="importo">418,90</span>
+                </div>
+                <div class="sezione-modello">
+                    <span class="nome-sezione">Altri enti</span>
+                    <span class="righi">
+                        <span class="debito" style="width:44px"></span>
+                        <span class="credito" style="width:18px"></span>
+                    </span>
+                    <span class="importo">602,00</span>
+                </div>
+            </div>
+            <span class="testo">Dettaglio F24 (28/64)&hellip;   417 righi tributo letti</span>
+        </div>
+        <p class="didascalia">Un F24 scomposto nelle sue sezioni: è quello che il report ribalta in righe di foglio.</p>
+    </div>
+</header>
+
+<section id="installazione">
+    <div class="container">
+        <span class="etichetta">Guida rapida</span>
+        <h2>Installazione dello userscript</h2>
+        <p>Richiede un gestore di userscript nel browser. Due minuti, un solo clic per l'installazione vera e propria. Se preferisci non installare Tampermonkey, guarda le <a href="#estensioni">estensioni</a>.</p>
+
+        <div class="schede-browser" role="tablist">
+            <button class="scheda-browser" role="tab" aria-selected="true" aria-controls="pannello-chrome" onclick="cambiaBrowser('chrome')">Chrome</button>
+            <button class="scheda-browser" role="tab" aria-selected="false" aria-controls="pannello-edge" onclick="cambiaBrowser('edge')">Edge</button>
+            <button class="scheda-browser" role="tab" aria-selected="false" aria-controls="pannello-firefox" onclick="cambiaBrowser('firefox')">Firefox</button>
+            <button class="scheda-browser" role="tab" aria-selected="false" aria-controls="pannello-safari" onclick="cambiaBrowser('safari')">Safari</button>
+        </div>
+
+        <div class="pannelli-browser">
+            <div id="pannello-chrome" class="pannello-browser attivo" role="tabpanel">
+                <div class="passi">
+                    <div class="passo">
+                        <div class="numero">1</div>
+                        <div><h4>Installa Tampermonkey</h4>
+                        <p><a href="https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo" target="_blank" rel="noopener">Tampermonkey sul Chrome Web Store</a></p></div>
+                    </div>
+                    <div class="passo">
+                        <div class="numero">2</div>
+                        <div><h4>Abilita gli script utente</h4>
+                        <p>Passaggio obbligatorio: <strong>senza, lo script non parte e non compare nessun errore.</strong></p>
+                        <ol>
+                            <li>Apri <code>chrome://extensions</code></li>
+                            <li>Trova <strong>Tampermonkey</strong>, apri <strong>Dettagli</strong></li>
+                            <li>Attiva <strong>«Consenti script utente»</strong></li>
+                        </ol></div>
+                    </div>
+                    <div class="passo">
+                        <div class="numero">3</div>
+                        <div><h4>Installa Cassetto_Utility</h4>
+                        <p><a href="https://raw.githubusercontent.com/denvermotel/Cassetto_Utility/refs/heads/main/Cassetto_Utility.user.js">Clicca qui</a>: Tampermonkey apre la finestra di conferma.</p></div>
+                    </div>
+                    <div class="passo">
+                        <div class="numero">4</div>
+                        <div><h4>Accedi al cassetto</h4>
+                        <p>Su <a href="https://cassetto.agenziaentrate.gov.it" target="_blank" rel="noopener">cassetto.agenziaentrate.gov.it</a> la barra compare da sé.</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="pannello-edge" class="pannello-browser" role="tabpanel">
+                <div class="passi">
+                    <div class="passo">
+                        <div class="numero">1</div>
+                        <div><h4>Installa Tampermonkey</h4>
+                        <p><a href="https://microsoftedge.microsoft.com/addons/detail/tampermonkey/iikmkjmpaadaobahmlepeloendndfphd" target="_blank" rel="noopener">Tampermonkey su Edge Add-ons</a></p></div>
+                    </div>
+                    <div class="passo">
+                        <div class="numero">2</div>
+                        <div><h4>Abilita gli script utente</h4>
+                        <p>Passaggio obbligatorio: <strong>senza, lo script non parte e non compare nessun errore.</strong></p>
+                        <ol>
+                            <li>Apri <code>edge://extensions</code></li>
+                            <li>Trova <strong>Tampermonkey</strong>, apri <strong>Dettagli</strong></li>
+                            <li>Attiva <strong>«Consenti script utente»</strong></li>
+                        </ol></div>
+                    </div>
+                    <div class="passo">
+                        <div class="numero">3</div>
+                        <div><h4>Installa Cassetto_Utility</h4>
+                        <p><a href="https://raw.githubusercontent.com/denvermotel/Cassetto_Utility/refs/heads/main/Cassetto_Utility.user.js">Clicca qui</a>: Tampermonkey apre la finestra di conferma.</p></div>
+                    </div>
+                    <div class="passo">
+                        <div class="numero">4</div>
+                        <div><h4>Accedi al cassetto</h4>
+                        <p>Su <a href="https://cassetto.agenziaentrate.gov.it" target="_blank" rel="noopener">cassetto.agenziaentrate.gov.it</a> la barra compare da sé.</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="pannello-firefox" class="pannello-browser" role="tabpanel">
+                <div class="passi">
+                    <div class="passo">
+                        <div class="numero">1</div>
+                        <div><h4>Installa Tampermonkey o Greasemonkey</h4>
+                        <p><a href="https://addons.mozilla.org/it/firefox/addon/tampermonkey/" target="_blank" rel="noopener">Tampermonkey</a> oppure
+                        <a href="https://addons.mozilla.org/it/firefox/addon/greasemonkey/" target="_blank" rel="noopener">Greasemonkey</a> per Firefox</p></div>
+                    </div>
+                    <div class="passo">
+                        <div class="numero">2</div>
+                        <div><h4>Installa Cassetto_Utility</h4>
+                        <p><a href="https://raw.githubusercontent.com/denvermotel/Cassetto_Utility/refs/heads/main/Cassetto_Utility.user.js">Clicca qui</a>: nessun passaggio aggiuntivo richiesto su Firefox.</p></div>
+                    </div>
+                    <div class="passo">
+                        <div class="numero">3</div>
+                        <div><h4>Accedi al cassetto</h4>
+                        <p>Su <a href="https://cassetto.agenziaentrate.gov.it" target="_blank" rel="noopener">cassetto.agenziaentrate.gov.it</a> la barra compare da sé.</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="pannello-safari" class="pannello-browser" role="tabpanel">
+                <div class="passi">
+                    <div class="passo">
+                        <div class="numero">1</div>
+                        <div><h4>Installa Userscripts</h4>
+                        <p><a href="https://apps.apple.com/it/app/userscripts/id1463298887" target="_blank" rel="noopener">Userscripts sul Mac App Store</a>, gratuita</p></div>
+                    </div>
+                    <div class="passo">
+                        <div class="numero">2</div>
+                        <div><h4>Abilita l'estensione</h4>
+                        <ol>
+                            <li>Apri <strong>Safari → Impostazioni → Estensioni</strong></li>
+                            <li>Attiva <strong>Userscripts</strong></li>
+                            <li>Concedi l'accesso al sito se richiesto</li>
+                        </ol></div>
+                    </div>
+                    <div class="passo">
+                        <div class="numero">3</div>
+                        <div><h4>Installa Cassetto_Utility</h4>
+                        <p><a href="https://raw.githubusercontent.com/denvermotel/Cassetto_Utility/refs/heads/main/Cassetto_Utility.user.js">Clicca qui</a>: Userscripts apre la finestra di conferma.</p></div>
+                    </div>
+                    <div class="passo">
+                        <div class="numero">4</div>
+                        <div><h4>Accedi al cassetto</h4>
+                        <p>Su <a href="https://cassetto.agenziaentrate.gov.it" target="_blank" rel="noopener">cassetto.agenziaentrate.gov.it</a> la barra compare da sé.</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="estensioni">
+    <div class="container">
+        <span class="etichetta">In arrivo</span>
+        <h2>Estensioni Chrome e Firefox</h2>
+        <p>
+            Stesso identico sorgente dello userscript, confezionato per i due store
+            ufficiali. Nessun passaggio manuale di attivazione: si installa e basta.
+        </p>
+        <p>
+            L'icona apre un menu con i salti alle sezioni del cassetto e le
+            impostazioni.
+        </p>
+
+        <div class="carte-store">
+            <div class="carta-store">
+                <span class="badge-attesa">In attesa di approvazione</span>
+                <h4>Chrome Web Store</h4>
+                <p>Il link comparirà qui non appena il pacchetto sarà approvato.</p>
+                <a class="btn btn-quieto" aria-disabled="true" href="#" onclick="return false;">Apri sul Web Store</a>
+            </div>
+            <div class="carta-store">
+                <span class="badge-attesa">In attesa di approvazione</span>
+                <h4>Firefox Add-ons</h4>
+                <p>Il link comparirà qui non appena il pacchetto sarà approvato.</p>
+                <a class="btn btn-quieto" aria-disabled="true" href="#" onclick="return false;">Apri su AMO</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="funzionalita">
+    <div class="container">
+        <span class="etichetta">Cosa fa</span>
+        <h2>Funzionalità</h2>
+        <p>I comandi disponibili dipendono dalla pagina aperta. Tutto avviene nel browser: nessuna elaborazione remota, nessun server.</p>
+
+        <div class="griglia-funzioni">
+            <div class="carta-funzione">
+                <h4>Scarica F24 e F23</h4>
+                <p>Tutti i versamenti dell'anno in PDF, uno dopo l'altro, senza aprire una scheda per ciascuno. Dove esiste la quietanza scarica quella; il modello, se preferisci, con un'opzione.</p>
+            </div>
+            <div class="carta-funzione">
+                <h4>Dettaglio tributi</h4>
+                <p>Legge il dettaglio di ogni F24 e produce un foglio con <strong>una riga per codice tributo</strong>: sezione, descrizione, rateazione, anno di riferimento, codice atto, importi a debito e a credito separati.</p>
+            </div>
+            <div class="carta-funzione">
+                <h4>Report Excel</h4>
+                <p>Elenco dei versamenti e riepilogo, con lo stato di ogni scarico. Serve al riscontro: quello che il cassetto dichiara contro quello che è finito sul disco. <strong>Gli importi sono numeri</strong>, non testo: si sommano senza conversioni.</p>
+            </div>
+            <div class="carta-funzione">
+                <h4>Certificazioni uniche</h4>
+                <p>PDF di tutte le CU dell'anno e report per quadro, lavoro autonomo e dipendente, con la descrizione per esteso della causale e una riga per ogni modulo.</p>
+            </div>
+            <div class="carta-funzione">
+                <h4>Ricerca per codice atto</h4>
+                <p>Nella ricerca tributi, un filtro che legge il codice atto di ogni risultato e scarica o esporta solo quelli che corrispondono.</p>
+            </div>
+            <div class="carta-funzione">
+                <h4>Selettore del periodo</h4>
+                <p>Compare nel form di ricerca del cassetto: anno e trimestre o mese, e le due date si compilano da sole, senza sbagliare l'ultimo giorno di febbraio.</p>
+            </div>
+        </div>
+
+        <h3>Dove compare cosa</h3>
+        <div class="scorre">
+        <table class="tabella">
+            <thead><tr><th>Pagina del cassetto</th><th>Comandi nella barra</th></tr></thead>
+            <tbody>
+                <tr><td><strong>Elenco F24</strong></td><td>Scarica F24, Report Excel, Dettaglio tributi, Protocolli, Riepilogo</td></tr>
+                <tr><td><strong>Elenco F23</strong></td><td>Scarica F23, Report Excel, Riepilogo</td></tr>
+                <tr><td><strong>Elenco CU</strong></td><td>Scarica CU, Report Excel CU, Riepilogo</td></tr>
+                <tr><td><strong>Ricerca tributi F24</strong></td><td>Periodo; con i risultati anche Scarica F24, Report Excel, filtro per codice atto</td></tr>
+                <tr><td><strong>Dettaglio di un versamento</strong></td><td>Copia del modello e, per gli F24 quietanzati, la quietanza</td></tr>
+                <tr><td><strong>Altre pagine</strong></td><td>I salti a Versamenti e Certificazioni uniche</td></tr>
+            </tbody>
+        </table>
+        </div>
+
+        <h3>Temi</h3>
+        <p>Le stesse quattro combinazioni di FE-Utility, il progetto gemello, così chi usa entrambi li riconosce come una cosa sola. Cambia il valore di partenza: qui è l'ottone, di là la menta, ed è il modo per distinguere a colpo d'occhio quale delle due barre si sta guardando.</p>
+        <div class="griglia-temi">
+            <div class="campione-tema">
+                <div class="pastiglie"><span style="background:#22262F"></span><span style="background:#C9962F"></span><span style="background:#59916B"></span><span style="background:#D26358"></span></div>
+                <div><div class="nome">Ardesia e ottone</div><div class="nota">Predefinito. Fondo freddo, accento caldo: la distanza maggiore dal blu del cassetto</div></div>
+            </div>
+            <div class="campione-tema">
+                <div class="pastiglie"><span style="background:#1A202C"></span><span style="background:#319795"></span><span style="background:#4FC3BD"></span><span style="background:#EE7070"></span></div>
+                <div><div class="nome">Notte nordica e ottanio</div><div class="nota">Tinte desaturate, per le sessioni lunghe</div></div>
+            </div>
+            <div class="campione-tema">
+                <div class="pastiglie"><span style="background:#0F172A"></span><span style="background:#F59E0B"></span><span style="background:#22C08D"></span><span style="background:#EF6B6B"></span></div>
+                <div><div class="nome">Blu notte e ambra</div><div class="nota">Vicino ai gestionali contabili</div></div>
+            </div>
+            <div class="campione-tema">
+                <div class="pastiglie"><span style="background:#18181B"></span><span style="background:#10B981"></span><span style="background:#34D07A"></span><span style="background:#F26981"></span></div>
+                <div><div class="nome">Grafite e menta</div><div class="nota">Il più sobrio, ed è quello di FE-Utility</div></div>
+            </div>
+        </div>
+
+        <div class="avvertenza">
+            <p><strong>Un lotto avviato non si interrompe.</strong> Il cassetto va interrogato un documento alla volta, e per un anno intero l'attesa si misura in minuti. Oltre i quindici documenti la barra chiede conferma prima di partire, e la domanda si può togliere dalle impostazioni.</p>
+        </div>
+    </div>
+</section>
+
+<section id="tecnico">
+    <div class="container">
+        <span class="etichetta">Per chi legge il codice</span>
+        <h2>Note tecniche</h2>
+        <p>Il cassetto è un sito a pagine vere, servite da una servlet, non un'applicazione a vista singola: ogni documento è una richiesta. I PDF si prendono con <code>fetch</code> e i cookie di sessione già presenti nel browser, e si salvano come blob: nessuna scheda si apre, nessuna finestra lampeggia.</p>
+        <p>Non si toccano endpoint non documentati per ottenere dati che il cassetto non mostri già: si leggono le stesse pagine che vedrebbe una persona. Uno script che si appoggia a interfacce interne si rompe in silenzio dopo un aggiornamento; uno che legge il DOM si rompe in modo visibile.</p>
+        <p>Il content script delle estensioni sta nel <strong>mondo isolato</strong>, non in quello della pagina: qui non serve leggere variabili del sito, quindi <code>chrome.storage</code> si raggiunge direttamente e il ponte su <code>postMessage</code> che Cassetto_Utility è costretto ad avere qui non esiste, insieme alla superficie di attacco che si porta dietro.</p>
+        <p><strong>Nessun dato lascia il browser.</strong> Le preferenze restano in locale (<code>GM_setValue</code> sotto Tampermonkey, <code>chrome.storage.local</code> nelle estensioni) e non sono mai sincronizzate con alcun servizio. Dettagli nell'<a href="privacy.html">informativa privacy</a>.</p>
+        <p>Codice leggibile e non minificato, licenza GPL-3.0, nessuna dipendenza esterna a runtime.</p>
+    </div>
+</section>
+
+<section id="changelog">
+    <div class="container">
+        <span class="etichetta">Cosa è cambiato</span>
+        <h2>Changelog</h2>
+        <p>Cronologia completa nel <a href="https://github.com/denvermotel/Cassetto_Utility/blob/main/CHANGELOG.md" target="_blank" rel="noopener">repository</a>.</p>
+
+        <div class="voce-changelog">
+            <div class="intestazione-changelog">0.09 beta <span class="tag-attuale">Attuale</span></div>
+            <ul class="elenco-changelog">
+                <li>Barra ridisegnata sulla stessa impalcatura di FE-Utility, con quattro temi</li>
+                <li>Pannello impostazioni: quietanza o copia, conferma sui lotti lunghi, tema</li>
+                <li>Estensioni Chrome e Firefox, con menu sull'icona e nessun ponte da mantenere</li>
+                <li>Preferenze salvate in locale su tre ambienti diversi con una sola interfaccia</li>
+                <li>Conferma prima dei lotti lunghi estesa a F24 e F23, non più solo alle CU</li>
+                <li>Importi come numeri nei fogli, con le celle vuote che restano vuote</li>
+                <li>Esito dello scarico detto dal colore e dalle parole, non da un'emoji</li>
+                <li>Selettore del periodo rifatto con la palette chiara, dentro il form del cassetto</li>
+                <li>Verifiche statiche su versioni, requisiti degli store e contrasti dei temi</li>
+            </ul>
+        </div>
+        <div class="voce-changelog">
+            <div class="intestazione-changelog">0.08 beta</div>
+            <ul class="elenco-changelog">
+                <li>Report «Dettaglio tributi F24»: una riga per codice tributo, con sezione e codice atto</li>
+            </ul>
+        </div>
+        <div class="voce-changelog">
+            <div class="intestazione-changelog">0.07 beta</div>
+            <ul class="elenco-changelog">
+                <li>CU multi-tipo: lavoro autonomo e dipendente, con la tabella completa delle causali</li>
+                <li>CU multi-modulo: una riga di foglio per ogni modulo della certificazione</li>
+                <li>Ricerca F24: filtro per codice atto su scarico e report</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<footer>
+    <div class="container">
+        <p>Cassetto_Utility è distribuito con licenza <a href="https://www.gnu.org/licenses/gpl-3.0" target="_blank" rel="noopener">GPL v3</a>. Fornito così com'è, senza garanzie. Non è un prodotto dell'Agenzia delle Entrate.</p>
+        <div class="links">
+            <a href="https://github.com/denvermotel/Cassetto_Utility">Codice sorgente</a>
+            <span class="separatore">·</span>
+            <a href="https://github.com/denvermotel/Cassetto_Utility/issues">Segnala un problema</a>
+            <span class="separatore">·</span>
+            <a href="privacy.html">Privacy</a>
+        </div>
+    </div>
+</footer>
+
+<script>
+    function cambiaBrowser(browser) {
+        document.querySelectorAll('.scheda-browser').forEach(function (t) {
+            t.setAttribute('aria-selected', 'false');
+        });
+        document.querySelectorAll('.pannello-browser').forEach(function (p) {
+            p.classList.remove('attivo');
+        });
+        var scheda = document.querySelector('[aria-controls="pannello-' + browser + '"]');
+        var pannello = document.getElementById('pannello-' + browser);
+        if (scheda) scheda.setAttribute('aria-selected', 'true');
+        if (pannello) pannello.classList.add('attivo');
+    }
+</script>
+
+</body>
+</html>
