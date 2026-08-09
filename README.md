@@ -210,22 +210,6 @@ Per provarle senza pubblicarle:
 - **Firefox** — `about:debugging`, Questo Firefox, Carica componente
   aggiuntivo temporaneo, file `estensione/firefox/manifest.json`
 
----
-
-## Verifiche
-
-Il cassetto richiede SPID o CNS, quindi non è automatizzabile: non esistono
-prove funzionali. Prima di ogni rilascio gira una suite di controlli statici,
-che tiene insieme le cose che si scoprirebbero altrimenti tardi - versioni
-disallineate fra script e manifest, requisiti degli store, comandi del menu che
-nessuno raccoglie, conversione degli importi, contrasti di colore sotto soglia.
-
-Non è distribuita con il pacchetto: vive nello spazio di lavoro insieme alle
-pagine del cassetto salvate per le prove, che contengono dati fiscali veri e
-non possono finire in un repository pubblico.
-
----
-
 ## Licenza
 
 [GPL-3.0](LICENSE). Fornito così com'è, senza garanzie.
