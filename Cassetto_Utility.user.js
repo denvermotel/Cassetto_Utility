@@ -3,7 +3,7 @@
 // @namespace      https://denvermotel.github.io/Cassetto_Utility/
 // @downloadURL    https://raw.githubusercontent.com/denvermotel/Cassetto_Utility/refs/heads/main/Cassetto_Utility.user.js
 // @updateURL      https://raw.githubusercontent.com/denvermotel/Cassetto_Utility/refs/heads/main/Cassetto_Utility.user.js
-// @version        0.09-beta
+// @version        0.10-alpha
 // @description    Toolbox per cassetto.agenziaentrate.gov.it: download massivo F24/F23/CU, Report Excel, supporto cassetto proprio e delegato
 // @author         denvermotel
 // @match          https://cassetto.agenziaentrate.gov.it/*
@@ -57,8 +57,8 @@ _win._CassettoUtility = true;
 
 /* ─── COSTANTI ───────────────────────────────────────────────── */
 // Forma breve, quella che si legge nella barra. `@version` in testa al file
-// resta `0.09-beta` e i manifest `0.9.0`, che e' la forma pretesa dagli store.
-var VERSION = '0.09β';
+// resta `0.10-alpha` e i manifest `0.10.0`, che e' la forma pretesa dagli store.
+var VERSION = '0.10α';
 var PANEL_ID = 'CU_Panel';
 var INSTRUCTIONS_URL = 'https://denvermotel.github.io/Cassetto_Utility/';
 var BASE_URL = window.location.origin;
@@ -269,23 +269,70 @@ function detectContext() {
 }
 detectContext();
 
-/* ─── IDENTIFIER EXTRACTION ──────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   DI CHI È IL CASSETTO APERTO
+
+   Il codice che si legge qui finisce nei nomi dei file scaricati e in testa a
+   ogni foglio di calcolo, quindi sbagliarlo significa archiviare i documenti
+   di un cliente sotto il codice di un altro.
+
+   Il caso da non sbagliare è la delega. Il cassetto lo dichiara in un riquadro
+   in cima alla pagina:
+
+       sei nel cassetto delegato di: <strong>SLVGRL92A31D423C - SALVO GABRIELE</strong>
+
+   Fino alla 0.09 lì dentro si cercava solo una partita IVA, undici cifre. Con
+   un cliente persona fisica non si trovava niente, si scivolava sul riquadro
+   dell'utente connesso e si prendeva **il codice dello studio**: le CU di un
+   cliente uscivano col codice fiscale del professionista, e i fogli pure. È il
+   difetto peggiore possibile, perché il risultato sembra plausibile.
+
+   Da qui due regole. Nel riquadro della delega si cerca prima il codice
+   fiscale e poi la partita IVA - non si possono confondere, hanno forme
+   diverse. E se il riquadro c'è ma non si riesce a leggerlo, **non si ripiega
+   sull'utente connesso**: si restituisce un codice palesemente sbagliato, che
+   si nota, invece di uno plausibile e falso.
+   ═══════════════════════════════════════════════════════════════ */
+
+var RE_CF   = /\b([A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z])\b/i;
+var RE_PIVA = /\b(\d{11})\b/;
+
+var SEL_DELEGA = 'div.section.border.border-primary.my-1.bg-light.px-3';
+
 function getIdentifier() {
-    var delegaEl = document.querySelector('div.section.border.border-primary.my-1.bg-light.px-3');
-    if (delegaEl) { var m = delegaEl.textContent.match(/\b(\d{11})\b/); if (m) return {code:m[1], tipo:'delegato'}; }
+    var delegaEl = document.querySelector(SEL_DELEGA);
+    if (delegaEl) {
+        // Il codice sta nello <strong>, nella forma "CODICE - NOME". Il testo
+        // dell'intero riquadro è il ripiego, se un giorno lo togliessero.
+        var forte = delegaEl.querySelector('strong');
+        var testo = (forte ? forte.textContent : delegaEl.textContent) || '';
+
+        var cf = testo.match(RE_CF);
+        if (cf) return { code: cf[1].toUpperCase(), tipo: 'delegato' };
+        var piva = testo.match(RE_PIVA);
+        if (piva) return { code: piva[1], tipo: 'delegato' };
+
+        log('Cassetto delegato, ma il codice del delegante non si legge: ' + testo.trim());
+        return { code: 'DELEGANTE', tipo: 'delegato' };
+    }
+
+    // Cassetto proprio: qui l'utente connesso è davvero l'intestatario
     var ps = document.querySelectorAll('#user-info-data-container p.mb-2, #user-info p.mb-2');
     for (var i = 0; i < ps.length; i++) {
         var t = ps[i].textContent.trim();
-        var mP = t.match(/\b(\d{11})\b/); if (mP) return {code:mP[1], tipo:'piva'};
-        var mC = t.match(/\b([A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z])\b/); if (mC) return {code:mC[1], tipo:'cf'};
+        var mP = t.match(RE_PIVA); if (mP) return {code:mP[1], tipo:'piva'};
+        var mC = t.match(RE_CF);   if (mC) return {code:mC[1].toUpperCase(), tipo:'cf'};
     }
     var ui = document.getElementById('user-info');
-    if (ui) { var mf = ui.textContent.match(/\b(\d{11})\b/); if (mf) return {code:mf[1], tipo:'piva'}; }
+    if (ui) {
+        var mf = ui.textContent.match(RE_PIVA); if (mf) return {code:mf[1], tipo:'piva'};
+        var mg = ui.textContent.match(RE_CF);   if (mg) return {code:mg[1].toUpperCase(), tipo:'cf'};
+    }
     return {code:'CODICE', tipo:'sconosciuto'};
 }
 
 function isDelegato() {
-    return !!document.querySelector('div.section.border.border-primary.my-1.bg-light.px-3');
+    return !!document.querySelector(SEL_DELEGA);
 }
 
 /* ─── UTILITY ────────────────────────────────────────────────── */
@@ -654,10 +701,23 @@ function foglioStile() {
         'overflow:hidden!important;margin-bottom:5px!important;}',
         '#CU_PFill{all:initial!important;display:block!important;height:100%!important;',
         'width:0%!important;background:' + COL.ottone + '!important;transition:width .3s!important;}',
-        '#CU_Status{all:initial!important;display:block!important;',
+        '#CU_RigaStato{all:initial!important;display:flex!important;',
+        'align-items:center!important;gap:10px!important;width:100%!important;}',
+        '#CU_Status{all:initial!important;display:block!important;flex:1 1 auto!important;',
         'font-family:' + FONT_CIFRE + '!important;font-size:10.5px!important;',
         'color:' + COL.cartaTenue + '!important;font-variant-numeric:tabular-nums!important;',
         'white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;}',
+        /* La × del resoconto: compare a fine lavoro, non durante */
+        '#CU_ChiudiReport{all:initial!important;display:none!important;',
+        'flex-shrink:0!important;cursor:pointer!important;',
+        'font-family:' + FONT_UI + '!important;font-size:12px!important;line-height:1!important;',
+        'color:' + COL.cartaTenue + '!important;background:transparent!important;',
+        'border:1px solid ' + COL.ardesia + '!important;border-radius:2px!important;',
+        'padding:2px 7px!important;}',
+        '#CU_ChiudiReport:hover{color:' + COL.carta + '!important;',
+        'border-color:' + COL.ottone + '!important;}',
+        '#CU_ChiudiReport:focus-visible{outline:2px solid ' + COL.ottone + '!important;',
+        'outline-offset:2px!important;}',
         '#CU_Status.riuscito{color:' + COL_ESITO.riuscito + '!important;}',
         '#CU_Status.avviso{color:' + COL_ESITO.avviso + '!important;}',
         '#CU_Status.errore{color:' + COL_ESITO.errore + '!important;}',
@@ -857,7 +917,11 @@ function creaPanel() {
         '</div>' +
         '<div id="CU_BottomRow">' +
             '<div id="CU_PBar"><span id="CU_PFill"></span></div>' +
-            '<span id="CU_Status" role="status" aria-live="polite"></span>' +
+            '<div id="CU_RigaStato">' +
+                '<span id="CU_Status" role="status" aria-live="polite"></span>' +
+                '<button id="CU_ChiudiReport" title="Chiudi il resoconto"' +
+                    ' aria-label="Chiudi il resoconto">&times;</button>' +
+            '</div>' +
         '</div>';
 
     p.querySelector('#CU_Logo').textContent = 'CASSETTO·UTILITY ' + VERSION;
@@ -872,6 +936,10 @@ function creaPanel() {
 
     p.querySelector('#CU_X').onclick = chiudiBarra;
     p.querySelector('#CU_Impostazioni').onclick = apriImpostazioni;
+    p.querySelector('#CU_ChiudiReport').onclick = chiudiReport;
+
+    // Se si sta leggendo il resoconto, la chiusura automatica aspetta
+    p.querySelector('#CU_BottomRow').addEventListener('mouseenter', annullaChiusuraProgrammata);
 
     /*
      * L'altezza cambia quando compare l'avanzamento o si apre un pannello.
@@ -1045,6 +1113,57 @@ function hideSt() {
     aggiornaPadding();
 }
 
+/* ─── IL RESOCONTO ──────────────────────────────────────────────
+   La riga di avanzamento compare quando parte un lavoro e alla fine resta,
+   perché quello che c'è scritto - quanti scaricati, quanti no - è il
+   resoconto di ciò che è appena successo.
+
+   Restare per sempre però è un'altra cosa: occupava spazio fino al
+   ricaricamento della pagina, e il testo veniva poi riscritto da messaggi
+   che con quel lavoro non c'entravano niente. Da qui la ×, e una chiusura
+   automatica che scatta solo quando non c'è nulla di storto da leggere.
+─────────────────────────────────────────────────────────────── */
+
+var _timerChiusura = null;
+var ATTESA_CHIUSURA = 20000;
+
+function annullaChiusuraProgrammata() {
+    if (_timerChiusura) { clearTimeout(_timerChiusura); _timerChiusura = null; }
+}
+
+function chiudiReport() {
+    annullaChiusuraProgrammata();
+    hideSt();
+    var chiudi = document.getElementById('CU_ChiudiReport');
+    if (chiudi) chiudi.style.setProperty('display', 'none', 'important');
+    var st = document.getElementById('CU_Status');
+    if (st) { st.textContent = ''; st.className = ''; }
+    var fill = document.getElementById('CU_PFill');
+    if (fill) fill.style.setProperty('width', '0%', 'important');
+
+    /*
+     * Col menu la barra era comparsa solo per mostrare l'avanzamento: chiuso
+     * il resoconto non ha più niente da dire e se ne va, lasciando la pagina
+     * com'era prima del comando.
+     */
+    if (comeEstensione() && opzioni.apertura === 'menu') chiudiBarra();
+}
+
+/**
+ * A fine lavoro mostra la × e, se non c'è niente di storto, chiude da sé dopo
+ * venti secondi. Con degli errori resta finché non la si chiude a mano: è
+ * proprio quello che si vuole leggere, e sparirebbe mentre lo si legge.
+ */
+function concludiReport(conErrori) {
+    var chiudi = document.getElementById('CU_ChiudiReport');
+    if (chiudi) chiudi.style.setProperty('display', 'inline-block', 'important');
+    aggiornaPadding();
+
+    annullaChiusuraProgrammata();
+    if (conErrori) return;
+    _timerChiusura = setTimeout(chiudiReport, ATTESA_CHIUSURA);
+}
+
 /**
  * Blocca la barra mentre un lotto è in corso.
  *
@@ -1059,6 +1178,18 @@ function setDis(val) {
         var b = document.getElementById(id);
         if (b) b.disabled = val;
     });
+
+    /*
+     * setDis(true) è il gesto che apre ogni lavoro lungo, e quindi è il punto
+     * giusto per togliere di mezzo il resoconto di quello precedente: la × non
+     * deve poter chiudere una riga che sta per essere riscritta, e la chiusura
+     * automatica non deve scattare a metà di un nuovo scarico.
+     */
+    if (val) {
+        annullaChiusuraProgrammata();
+        var chiudi = document.getElementById('CU_ChiudiReport');
+        if (chiudi) chiudi.style.setProperty('display', 'none', 'important');
+    }
 }
 
 /**
@@ -1079,6 +1210,7 @@ function eseguiAzioneProtetta(action) {
             log('Azione "' + action + '" interrotta: ' + motivo);
             showSt('Operazione interrotta da un errore: ' + motivo, 100, 'errore');
             setDis(false);
+            concludiReport(true);
         });
 }
 
@@ -1445,7 +1577,7 @@ function dlPdf(url, filename) {
 var dlLog = [];
 
 async function runBatch(rows) {
-    if (!rows.length) { showSt('Nessun versamento trovato.', 0, 'avviso'); return; }
+    if (!rows.length) { showSt('Nessun versamento trovato.', 0, 'avviso'); concludiReport(true); return; }
     if (!await confermaLotto(rows.length, 'versamenti')) { showSt('Download annullato.', 0, 'avviso'); setTimeout(hideSt, 3000); return; }
     setDis(true); dlLog = [];
     var ok_n = 0, fail_n = 0;
@@ -1471,6 +1603,7 @@ async function runBatch(rows) {
     document.getElementById('CU_PFill').style.setProperty('width','100%','important');
     showSt('Completato: '+ok_n+' scaricati'+(fail_n>0?', '+fail_n+' non riusciti':'')+'. Il report Excel mette a confronto elenco e file.', 100, fail_n>0?'avviso':'riuscito');
     setDis(false);
+    concludiReport(fail_n > 0);
 }
 
 /* Batch download F24 da ricerca — con filtro codice atto opzionale
@@ -1479,7 +1612,7 @@ async function runBatch(rows) {
    extra che sono presenti nel link della lista ma NON nel link PDF del dettaglio.
 */
 async function runBatchF24Sel(rows) {
-    if (!rows.length) { showSt('Nessun versamento trovato.', 0, 'avviso'); return; }
+    if (!rows.length) { showSt('Nessun versamento trovato.', 0, 'avviso'); concludiReport(true); return; }
     var filtroAtto = '';
     var attoInput = document.getElementById('CU_AttoInput');
     if (attoInput) filtroAtto = attoInput.value.trim();
@@ -1499,7 +1632,7 @@ async function runBatchF24Sel(rows) {
         var filtrate = rows.filter(function(r) { return r.codiceAtto && r.codiceAtto.indexOf(filtroAtto) !== -1; });
         if (!filtrate.length) {
             showSt('Nessun F24 con codice atto "'+filtroAtto+'" fra i '+rows.length+' risultati.', 0, 'avviso');
-            setDis(false); return;
+            setDis(false); concludiReport(true); return;
         }
         var conferma = await showAlert(
             'Filtro per codice atto',
@@ -1534,6 +1667,7 @@ async function runBatchF24Sel(rows) {
     msg += '. Il report Excel ne tiene conto.';
     showSt(msg, 100, fail_n>0?'avviso':'riuscito');
     setDis(false);
+    concludiReport(fail_n > 0);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1755,7 +1889,7 @@ function fetchF24Tributi(detHref) {
 var cuDlLog = [];
 
 async function runBatchCU(items) {
-    if (!items.length) { showSt('Nessuna CU trovata.', 0, 'avviso'); return; }
+    if (!items.length) { showSt('Nessuna CU trovata.', 0, 'avviso'); concludiReport(true); return; }
     if (!await confermaLotto(items.length, 'certificazioni uniche')) {
         showSt('Download annullato.', 0, 'avviso'); setTimeout(hideSt, 3000); return;
     }
@@ -1774,6 +1908,7 @@ async function runBatchCU(items) {
     document.getElementById('CU_PFill').style.setProperty('width','100%','important');
     showSt('Completato: '+ok_n+' scaricate'+(fail_n>0?', '+fail_n+' non riuscite':'')+'. Il report Excel CU ne fa il riepilogo.', 100, fail_n>0?'avviso':'riuscito');
     setDis(false);
+    concludiReport(fail_n > 0);
 }
 
 /* Report Excel CU — Multi-tipo (Autonomo/Dipendente/Altro) + Multi-modulo
@@ -1784,7 +1919,7 @@ async function runBatchCU(items) {
    4) Colonne: Tipo CU, Descrizione Causale (da CAUSALI_MAP), denominazione sostituto */
 async function reportExcelCU() {
     var items = collectCU();
-    if (!items.length) { showSt('Nessuna CU trovata.', 0, 'avviso'); return; }
+    if (!items.length) { showSt('Nessuna CU trovata.', 0, 'avviso'); concludiReport(true); return; }
     setDis(true);
     var data = []; // una riga per ogni modulo di ogni CU
     var rowN = 0;
@@ -1913,7 +2048,7 @@ async function reportExcelCU() {
         +'<Styles>'+styles+'</Styles>'+sh1+sh2+'</Workbook>';
     dlXLS(xls, safe(cod)+'_'+safe(anno)+'_ReportCU_CassettoUtility.xls');
     showSt('Report Excel CU generato: ' + data.length + ' righe da ' + items.length + ' CU.', 100, 'riuscito');
-    setDis(false); setTimeout(hideSt, 4000);
+    setDis(false); concludiReport(false);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -2271,6 +2406,7 @@ async function eseguiAzione(action) {
             showSt(rows.length+' protocolli copiati negli appunti.', 100, 'riuscito'); setTimeout(hideSt, 3000);
         }).catch(function() {
             showSt('Copia negli appunti non riuscita: la pagina deve avere il fuoco.', 0, 'errore');
+            concludiReport(true);
         });
         return;
     }
@@ -2311,17 +2447,17 @@ async function eseguiAzione(action) {
     if (action === 'reportExcel') {
         summaryVisible = false;
         var rows3 = isF24List ? collectF24() : collectF23();
-        if (!rows3.length) { showSt('Nessun versamento trovato.', 0, 'avviso'); return; }
+        if (!rows3.length) { showSt('Nessun versamento trovato.', 0, 'avviso'); concludiReport(true); return; }
         var cod = getIdentifier().code, anno = getParam('Anno') || 'ANNO';
         dlXLS(buildXLS(rows3, dlLog), safe(cod)+'_'+safe(anno)+'_Report'+docType+'_CassettoUtility.xls');
-        showSt('Report Excel generato.', 100, 'riuscito'); setTimeout(hideSt, 4000); return;
+        showSt('Report Excel generato.', 100, 'riuscito'); concludiReport(false); return;
     }
 
     // Report Excel "Dettaglio Tributi F24" \u2014 legge il dettaglio di ogni F24 e ribalta i righi tributo
     if (action === 'reportTributiF24') {
         summaryVisible = false;
         var rowsT = collectF24();
-        if (!rowsT.length) { showSt('Nessun F24 trovato.', 0, 'avviso'); return; }
+        if (!rowsT.length) { showSt('Nessun F24 trovato.', 0, 'avviso'); concludiReport(true); return; }
         setDis(true);
         var trib = [], errLetture = 0;
         for (var it = 0; it < rowsT.length; it++) {
@@ -2341,14 +2477,14 @@ async function eseguiAzione(action) {
         var codT = getIdentifier().code, annoT = getParam('Anno') || 'ANNO';
         dlXLS(buildXLSTributi(trib, rowsT.length, errLetture), safe(codT)+'_'+safe(annoT)+'_DettaglioTributiF24_CassettoUtility.xls');
         showSt('Dettaglio tributi generato: '+trib.length+' righi da '+rowsT.length+' F24'+(errLetture?', '+errLetture+' non letti':'')+'.', 100, errLetture?'avviso':'riuscito');
-        setDis(false); setTimeout(hideSt, 5000); return;
+        setDis(false); concludiReport(errLetture > 0); return;
     }
 
     // Report Excel ricerca F24 — con fetch codice atto per ogni riga
     if (action === 'reportExcelSel') {
         summaryVisible = false;
         var selR = collectF24Sel();
-        if (!selR.length) { showSt('Nessun tributo trovato.', 0, 'avviso'); return; }
+        if (!selR.length) { showSt('Nessun tributo trovato.', 0, 'avviso'); concludiReport(true); return; }
         setDis(true);
         // Fetch codice atto per ogni riga
         for (var ra = 0; ra < selR.length; ra++) {
@@ -2361,7 +2497,7 @@ async function eseguiAzione(action) {
         var attoInputXls = document.getElementById('CU_AttoInput');
         if (attoInputXls) filtroAttoXls = attoInputXls.value.trim();
         dlXLS(buildXLSSel(selR, dlLog, filtroAttoXls), safe(getIdentifier().code)+'_RicercaF24_CassettoUtility.xls');
-        showSt('Report Excel della ricerca F24 generato.', 100, 'riuscito'); setDis(false); setTimeout(hideSt, 4000); return;
+        showSt('Report Excel della ricerca F24 generato.', 100, 'riuscito'); setDis(false); concludiReport(false); return;
     }
 
     // Batch download CU
@@ -2393,7 +2529,8 @@ async function eseguiAzione(action) {
             await sleep(500);
             ok = await dlPdf(pdfU, fn);
         }
-        showSt(ok ? fn+' scaricato.' : 'Download non riuscito.', 100, ok?'riuscito':'errore'); setDis(false); return;
+        showSt(ok ? fn+' scaricato.' : 'Download non riuscito.', 100, ok?'riuscito':'errore');
+        setDis(false); concludiReport(!ok); return;
     }
 
     // Dettaglio CU — Genera PDF
@@ -2407,7 +2544,8 @@ async function eseguiAzione(action) {
         var fname2 = safe(getIdentifier().code)+'_'+safe(annoCU)+'_'+safe(d.m)+'_'+safe(d.g)+'_CU_'+safe(protCU.slice(-7))+'.pdf';
         showSt('Generazione del PDF CU\u2026', 50); setDis(true);
         var ok2 = await dlCUPdf(annoCU, protCU, fname2);
-        showSt(ok2 ? fname2+' generato.' : 'Generazione del PDF non riuscita.', 100, ok2?'riuscito':'errore'); setDis(false); return;
+        showSt(ok2 ? fname2+' generato.' : 'Generazione del PDF non riuscita.', 100, ok2?'riuscito':'errore');
+        setDis(false); concludiReport(!ok2); return;
     }
 }
 
