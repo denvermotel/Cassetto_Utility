@@ -3,7 +3,7 @@
 // @namespace      https://denvermotel.github.io/Cassetto_Utility/
 // @downloadURL    https://raw.githubusercontent.com/denvermotel/Cassetto_Utility/refs/heads/main/Cassetto_Utility.user.js
 // @updateURL      https://raw.githubusercontent.com/denvermotel/Cassetto_Utility/refs/heads/main/Cassetto_Utility.user.js
-// @version        0.10-alpha
+// @version        0.10-beta
 // @description    Toolbox per cassetto.agenziaentrate.gov.it: download massivo F24/F23/CU, Report Excel, supporto cassetto proprio e delegato
 // @author         denvermotel
 // @match          https://cassetto.agenziaentrate.gov.it/*
@@ -57,8 +57,8 @@ _win._CassettoUtility = true;
 
 /* ─── COSTANTI ───────────────────────────────────────────────── */
 // Forma breve, quella che si legge nella barra. `@version` in testa al file
-// resta `0.10-alpha` e i manifest `0.10.0`, che e' la forma pretesa dagli store.
-var VERSION = '0.10α';
+// resta `0.10-beta` e i manifest `0.10.0`, che e' la forma pretesa dagli store.
+var VERSION = '0.10β';
 var PANEL_ID = 'CU_Panel';
 var INSTRUCTIONS_URL = 'https://denvermotel.github.io/Cassetto_Utility/';
 var BASE_URL = window.location.origin;
@@ -347,16 +347,20 @@ function sleep(ms) { return new Promise(function(r){setTimeout(r,ms);}); }
 /*
  * Escape per XML. Il controllo su undefined e null va fatto per esteso: con
  * `s || ''` lo zero diventa stringa vuota, e uno zero finisce spesso in una
- * cella dichiarata ss:Type="Number" - i contatori dei fogli Riepilogo valgono
- * zero proprio nel caso piu' comune, il report generato senza aver scaricato
- * nulla. Un <Data ss:Type="Number"> vuoto non e' SpreadsheetML valido.
+ * cella numerica - i contatori dei fogli Riepilogo valgono zero proprio nel
+ * caso piu' comune, il report generato senza aver scaricato nulla.
  *
  * Apici e virgolette non servirebbero, perche' oggi nessun dato variabile
  * finisce dentro un attributo XML, ma cosi' l'helper e' sicuro per
  * costruzione invece che per ispezione di tutti i chiamanti.
+ *
+ * I caratteri di controllo vanno tolti prima: sono vietati in XML 1.0 anche
+ * scritti come entita', e uno solo di essi - dentro una descrizione letta dal
+ * cassetto - basterebbe a rendere illeggibile l'intero foglio.
  */
 function esc(s) {
     return String(s === undefined || s === null ? '' : s)
+        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,'')
         .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
         .replace(/"/g,'&quot;').replace(/'/g,'&apos;');
 }
@@ -368,8 +372,8 @@ function pad2(n) { return String(n).padStart(2,'0'); }
    Il cassetto scrive gli importi in forma italiana - `1.234,56 €`, con il
    punto a separare le migliaia, la virgola i decimali, e spesso uno spazio
    unificatore U+00A0 al posto di quello normale. Excel, in una cella
-   dichiarata ss:Type="Number", vuole l'esatto contrario: punto decimale,
-   niente separatore di migliaia, niente valuta.
+   numerica, vuole l'esatto contrario: punto decimale, niente separatore di
+   migliaia, niente valuta.
 
    Fino alla 0.09 gli importi uscivano tutti come testo, e per sommare una
    colonna bisognava convertirla a mano. Ora si prova a convertire, ma il
@@ -414,27 +418,30 @@ function numeroDaImporto(s) {
     return negativo ? -n : n;
 }
 
-/** Una cella qualsiasi. `t` è il tipo SpreadsheetML, String se non detto. */
+/* ═══════════════════════════════════════════════════════════════
+   IL MODELLO DEL FOGLIO
+
+   Una cella non è un pezzo di XML ma un oggetto `{v, t, s}`: valore, tipo
+   ('String' o 'Number') e nome dello stile fra quelli dichiarati in
+   STILI_XLSX. Una riga è un array di celle - vuoto se la riga è vuota - e un
+   foglio è `{nome, colonne, righe}`, con le larghezze in punti.
+
+   Chi costruisce un report non deve sapere in che formato finirà: tutto il
+   rendering vive in un posto solo, il generatore XLSX più in basso. Fino alla
+   0.09 i builder concatenavano SpreadsheetML a mano, ed è esattamente il
+   motivo per cui il formato sbagliato è passato inosservato tanto a lungo.
+   ═══════════════════════════════════════════════════════════════ */
+
+/** Una cella qualsiasi. `t` è il tipo, String se non detto. */
 function cella(v, t, sty) {
-    return '<Cell' + (sty ? ' ss:StyleID="' + sty + '"' : '') +
-           '><Data ss:Type="' + (t || 'String') + '">' + esc(v) + '</Data></Cell>';
+    return { v: (v === undefined || v === null) ? '' : v, t: t || 'String', s: sty || '' };
 }
 
 /*
- * Gli stili con il formato numerico. Servono in coppia con quelli di riga,
- * perché una cella ha un solo StyleID e il colore della riga non si può
- * perdere: `ok` diventa `okn`, e così via. L'ordine degli elementi dentro
- * <Style> non è libero - Interior prima di NumberFormat - o Excel rifiuta il
- * file all'apertura.
+ * Gli stili con il formato numerico servono in coppia con quelli di riga,
+ * perché una cella ha un solo stile e il colore della riga non si può
+ * perdere: `ok` diventa `okn`, e così via.
  */
-var FORMATO_IMPORTO = '<NumberFormat ss:Format="#,##0.00"/>';
-
-var STILI_IMPORTO =
-    '<Style ss:ID="num">' + FORMATO_IMPORTO + '</Style>' +
-    '<Style ss:ID="okn"><Interior ss:Color="#E8F5E9" ss:Pattern="Solid"/>' + FORMATO_IMPORTO + '</Style>' +
-    '<Style ss:ID="ern"><Interior ss:Color="#FFEBEE" ss:Pattern="Solid"/>' + FORMATO_IMPORTO + '</Style>' +
-    '<Style ss:ID="wnn"><Interior ss:Color="#FFF9C4" ss:Pattern="Solid"/>' + FORMATO_IMPORTO + '</Style>';
-
 var STILE_IMPORTO_PER_RIGA = { ok: 'okn', er: 'ern', wn: 'wnn' };
 
 /**
@@ -444,8 +451,7 @@ var STILE_IMPORTO_PER_RIGA = { ok: 'okn', er: 'ern', wn: 'wnn' };
 function cellaImporto(v, sty) {
     var n = numeroDaImporto(v);
     if (n === null) return cella(v, 'String', sty);
-    var stile = sty ? (STILE_IMPORTO_PER_RIGA[sty] || sty) : 'num';
-    return '<Cell ss:StyleID="' + stile + '"><Data ss:Type="Number">' + n + '</Data></Cell>';
+    return cella(n, 'Number', sty ? (STILE_IMPORTO_PER_RIGA[sty] || sty) : 'num');
 }
 
 function buildFilename(tipo, anno, dateStr, idx) {
@@ -1994,65 +2000,50 @@ async function reportExcelCU() {
     var totDip = data.filter(function(d){return d.tipoCU === 'Dipendente';}).length;
     var totAltro = data.filter(function(d){return d.tipoCU === 'Altro';}).length;
 
-    var S = '<Style ss:ID="', E = '</Style>';
-    var styles = S+'hdr"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#1a3a2a" ss:Pattern="Solid"/>'+E
-        +S+'ttl"><Font ss:Bold="1" ss:Size="14"/>'+E+S+'bld"><Font ss:Bold="1"/>'+E
-        +S+'ok"><Interior ss:Color="#E8F5E9" ss:Pattern="Solid"/>'+E
-        +S+'er"><Interior ss:Color="#FFEBEE" ss:Pattern="Solid"/>'+E
-        +S+'wn"><Interior ss:Color="#FFF9C4" ss:Pattern="Solid"/>'+E
-        +S+'aut"><Interior ss:Color="#E3F2FD" ss:Pattern="Solid"/>'+E
-        +S+'dip"><Interior ss:Color="#FFF3E0" ss:Pattern="Solid"/>'+E
-        +STILI_IMPORTO;
-
     // Foglio 1: ELENCO CU (dettaglio) — con Tipo CU, Desc Causale, multi-modulo
     var hdrs = ['N\u00B0','N. Certificazione','Data','CF Sostituto','Denominazione Sostituto',
         'Tipo CU','Modulo','Causale','Descrizione Causale',
         'Importo 1 (Lordo/Reddito)','Importo 2 (Impon./Rit.IRPEF)','Importo 3 (Rit.Acc./Add.Reg.)','Importo 4 (Add.Com.)',
         'Nome File','Stato'];
-    var hrow = hdrs.map(function(h){return cella(h,'String','hdr');}).join('');
+    var hrow = hdrs.map(function(h){return cella(h,'String','hdr');});
     var widths = [35,180,80,130,200,80,55,55,260,130,130,130,100,260,90];
-    var cols = widths.map(function(w){return '<Column ss:Width="'+w+'"/>';}).join('');
     var drows = data.map(function(d) {
         var sty = d.stato === 'Scaricato' ? 'ok' : (d.stato === 'Errore' ? 'er' : 'wn');
-        return '<Row>'+cella(d.n,'Number',sty)+cella(d.numCert,'String',sty)+cella(d.data,'String',sty)
-            +cella(d.sostituto,'String',sty)+cella(d.denominazione,'String',sty)
-            +cella(d.tipoCU,'String',sty)+cella(d.modulo,'Number',sty)+cella(d.causale,'String',sty)+cella(d.descrCausale,'String',sty)
-            +cellaImporto(d.col1,sty)+cellaImporto(d.col2,sty)+cellaImporto(d.col3,sty)+cellaImporto(d.col4,sty)
-            +cella(d.filename,'String',sty)+cella(d.stato,'String',sty)+'</Row>';
-    }).join('');
-    var sh1 = '<Worksheet ss:Name="Elenco CU"><Table>'+cols+'<Row>'+hrow+'</Row>'+drows+'</Table></Worksheet>';
+        return [cella(d.n,'Number',sty),cella(d.numCert,'String',sty),cella(d.data,'String',sty),
+            cella(d.sostituto,'String',sty),cella(d.denominazione,'String',sty),
+            cella(d.tipoCU,'String',sty),cella(d.modulo,'Number',sty),cella(d.causale,'String',sty),cella(d.descrCausale,'String',sty),
+            cellaImporto(d.col1,sty),cellaImporto(d.col2,sty),cellaImporto(d.col3,sty),cellaImporto(d.col4,sty),
+            cella(d.filename,'String',sty),cella(d.stato,'String',sty)];
+    });
+    var sh1 = { nome:'Elenco CU', colonne:widths, righe:[hrow].concat(drows) };
 
     // Foglio 2: RIEPILOGO CU
-    var sh2 = '<Worksheet ss:Name="Riepilogo CU">'
-        +'<Table><Column ss:Width="220"/><Column ss:Width="180"/>'
-        +'<Row>'+cella('Cassetto_Utility v'+VERSION+' \u2014 Report CU','String','ttl')+'</Row>'
-        +'<Row>'+cella('Identificativo:')+cella(cod)+'</Row>'
-        +'<Row>'+cella('Modalit\u00e0:')+cella(tipoCod)+'</Row>'
-        +'<Row>'+cella('Anno imposta:')+cella(anno)+'</Row>'
-        +'<Row>'+cella('Data report:')+cella(nowStr)+'</Row>'
-        +'<Row/>'+
-        '<Row>'+cella('CU trovate (certificazioni):','String','bld')+cella(items.length,'Number')+'</Row>'
-        +'<Row>'+cella('Righe totali (con moduli):','String','bld')+cella(data.length,'Number')+'</Row>'
-        +'<Row/>'+
-        '<Row>'+cella('Tipo Autonomo:','String','bld')+cella(totAut,'Number','aut')+'</Row>'
-        +'<Row>'+cella('Tipo Dipendente:','String','bld')+cella(totDip,'Number','dip')+'</Row>'
-        +'<Row>'+cella('Tipo Altro:','String','bld')+cella(totAltro,'Number','wn')+'</Row>'
-        +'<Row/>'+
-        '<Row>'+cella('Scaricate:','String','bld')+cella(totOK,'Number','ok')+'</Row>'
-        +'<Row>'+cella('Errori:','String','bld')+cella(totERR,'Number','er')+'</Row>'
-        +'<Row>'+cella('Non scaricate:','String','bld')+cella(totNS,'Number','wn')+'</Row>'
-        +'</Table></Worksheet>';
+    var sh2 = { nome:'Riepilogo CU', colonne:[220,180], righe:[
+        [cella('Cassetto_Utility v'+VERSION+' \u2014 Report CU','String','ttl')],
+        [cella('Identificativo:'),cella(cod)],
+        [cella('Modalit\u00e0:'),cella(tipoCod)],
+        [cella('Anno imposta:'),cella(anno)],
+        [cella('Data report:'),cella(nowStr)],
+        [],
+        [cella('CU trovate (certificazioni):','String','bld'),cella(items.length,'Number')],
+        [cella('Righe totali (con moduli):','String','bld'),cella(data.length,'Number')],
+        [],
+        [cella('Tipo Autonomo:','String','bld'),cella(totAut,'Number','aut')],
+        [cella('Tipo Dipendente:','String','bld'),cella(totDip,'Number','dip')],
+        [cella('Tipo Altro:','String','bld'),cella(totAltro,'Number','wn')],
+        [],
+        [cella('Scaricate:','String','bld'),cella(totOK,'Number','ok')],
+        [cella('Errori:','String','bld'),cella(totERR,'Number','er')],
+        [cella('Non scaricate:','String','bld'),cella(totNS,'Number','wn')]
+    ] };
 
-    var xls = '<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?>'
-        +'<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">'
-        +'<Styles>'+styles+'</Styles>'+sh1+sh2+'</Workbook>';
-    dlXLS(xls, safe(cod)+'_'+safe(anno)+'_ReportCU_CassettoUtility.xls');
+    dlXLS([sh1, sh2], safe(cod)+'_'+safe(anno)+'_ReportCU_CassettoUtility.xlsx');
     showSt('Report Excel CU generato: ' + data.length + ' righe da ' + items.length + ' CU.', 100, 'riuscito');
     setDis(false); concludiReport(false);
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   F24/F23 — BUILD XLS REPORT
+   F24/F23 — COSTRUZIONE DEL REPORT
    1) Foglio 1 = Elenco (dettaglio), Foglio 2 = Riepilogo
    ═══════════════════════════════════════════════════════════════ */
 
@@ -2067,47 +2058,46 @@ function buildXLS(rows, log) {
     var totOK = log.filter(function(l){return l.ok;}).length;
     var totERR = log.filter(function(l){return !l.ok;}).length;
     var totNS = rows.length - log.length;
-    var S = '<Style ss:ID="', E = '</Style>';
-    var styles = S+'hdr"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#1a3a2a" ss:Pattern="Solid"/>'+E
-        +S+'ttl"><Font ss:Bold="1" ss:Size="14"/>'+E+S+'bld"><Font ss:Bold="1"/>'+E
-        +S+'ok"><Interior ss:Color="#E8F5E9" ss:Pattern="Solid"/>'+E
-        +S+'er"><Interior ss:Color="#FFEBEE" ss:Pattern="Solid"/>'+E
-        +S+'wn"><Interior ss:Color="#FFF9C4" ss:Pattern="Solid"/>'+E
-        +STILI_IMPORTO;
 
     // Foglio 1: ELENCO (dettaglio) — era foglio 2
     var hdrs = dt === 'F24' ? ['N\u00B0','Data','Saldo','Protocollo','Disponibile','Nome File','Stato'] : ['N\u00B0','Data','Importo','Nome File','Stato'];
-    var hrow = hdrs.map(function(h){return cella(h,'String','hdr');}).join('');
+    var hrow = hdrs.map(function(h){return cella(h,'String','hdr');});
     var widths = dt === 'F24' ? [40,100,100,180,100,280,110] : [40,100,100,280,110];
-    var cols = widths.map(function(w){return '<Column ss:Width="'+w+'"/>';}).join('');
     var drows = rows.map(function(r,i) {
         var l = r.proto ? logMap[r.proto] : (logArr[i]||null);
         var fname = l ? l.filename : '', stato = l ? (l.ok?'Scaricato':'Errore') : 'Non scaricato';
         var sty = l ? (l.ok?'ok':'er') : 'wn';
         var tipoDisp = r.hasQuietanza ? 'Quietanza' : (dt==='F24'?'Copia F24':'Copia F23');
-        if (dt === 'F24') return '<Row>'+cella(i+1,'Number',sty)+cella(r.date,'String',sty)+cellaImporto(r.importo,sty)+cella(r.proto,'String',sty)+cella(tipoDisp,'String',sty)+cella(fname,'String',sty)+cella(stato,'String',sty)+'</Row>';
-        return '<Row>'+cella(i+1,'Number',sty)+cella(r.date,'String',sty)+cellaImporto(r.importo,sty)+cella(fname,'String',sty)+cella(stato,'String',sty)+'</Row>';
-    }).join('');
-    var sh1 = '<Worksheet ss:Name="Elenco '+dt+'"><Table>'+cols+'<Row>'+hrow+'</Row>'+drows+'</Table></Worksheet>';
+        if (dt === 'F24') return [cella(i+1,'Number',sty),cella(r.date,'String',sty),cellaImporto(r.importo,sty),cella(r.proto,'String',sty),cella(tipoDisp,'String',sty),cella(fname,'String',sty),cella(stato,'String',sty)];
+        return [cella(i+1,'Number',sty),cella(r.date,'String',sty),cellaImporto(r.importo,sty),cella(fname,'String',sty),cella(stato,'String',sty)];
+    });
+    var sh1 = { nome:'Elenco '+dt, colonne:widths, righe:[hrow].concat(drows) };
 
     // Foglio 2: RIEPILOGO — era foglio 1
-    var sh2 = '<Worksheet ss:Name="Riepilogo '+dt+'"><Table><Column ss:Width="220"/><Column ss:Width="180"/>'
-        +'<Row>'+cella('Cassetto_Utility v'+VERSION+' \u2014 Report '+dt,'String','ttl')+'</Row>'
-        +'<Row>'+cella('Identificativo (PIVA/CF):')+cella(cod)+'</Row>'
-        +'<Row>'+cella('Modalit\u00e0:')+cella(tipoCod)+'</Row>'
-        +'<Row>'+cella('Anno selezionato:')+cella(anno)+'</Row>'
-        +'<Row>'+cella('Tipo modello:')+cella(dt)+'</Row>'
-        +'<Row>'+cella('Data report:')+cella(nowStr)+'</Row><Row/>'
-        +'<Row>'+cella('Versamenti sul sito:','String','bld')+cella(rows.length,'Number')+'</Row>';
-    if (dt === 'F24') sh2 += '<Row>'+cella('  con Quietanza:','String','bld')+cella(totQ,'Number')+'</Row><Row>'+cella('  solo Copia F24:','String','bld')+cella(totC,'Number')+'</Row>';
-    sh2 += '<Row/><Row>'+cella('Scaricati:','String','bld')+cella(totOK,'Number','ok')+'</Row>'
-        +'<Row>'+cella('Errori:','String','bld')+cella(totERR,'Number','er')+'</Row>'
-        +'<Row>'+cella('Non scaricati:','String','bld')+cella(totNS,'Number','wn')+'</Row></Table></Worksheet>';
+    var righe2 = [
+        [cella('Cassetto_Utility v'+VERSION+' \u2014 Report '+dt,'String','ttl')],
+        [cella('Identificativo (PIVA/CF):'),cella(cod)],
+        [cella('Modalit\u00e0:'),cella(tipoCod)],
+        [cella('Anno selezionato:'),cella(anno)],
+        [cella('Tipo modello:'),cella(dt)],
+        [cella('Data report:'),cella(nowStr)],
+        [],
+        [cella('Versamenti sul sito:','String','bld'),cella(rows.length,'Number')]
+    ];
+    if (dt === 'F24') {
+        righe2.push([cella('  con Quietanza:','String','bld'),cella(totQ,'Number')]);
+        righe2.push([cella('  solo Copia F24:','String','bld'),cella(totC,'Number')]);
+    }
+    righe2.push([]);
+    righe2.push([cella('Scaricati:','String','bld'),cella(totOK,'Number','ok')]);
+    righe2.push([cella('Errori:','String','bld'),cella(totERR,'Number','er')]);
+    righe2.push([cella('Non scaricati:','String','bld'),cella(totNS,'Number','wn')]);
+    var sh2 = { nome:'Riepilogo '+dt, colonne:[220,180], righe:righe2 };
 
-    return '<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Styles>'+styles+'</Styles>'+sh1+sh2+'</Workbook>';
+    return [sh1, sh2];
 }
 
-/* XLS per risultati ricerca F24 — con colonna Codice Atto e filtro opzionale */
+/* Fogli per i risultati ricerca F24 — con colonna Codice Atto e filtro opzionale */
 function buildXLSSel(rows, log, filtroAtto) {
     var idInfo = getIdentifier(), cod = idInfo.code;
     var tipoCod = isDelegato() ? 'Cassetto Delegato' : (idInfo.tipo === 'cf' ? 'Cassetto Proprio (CF)' : 'Cassetto Proprio (PIVA)');
@@ -2115,79 +2105,326 @@ function buildXLSSel(rows, log, filtroAtto) {
     var totOK = log.filter(function(l){return l.ok;}).length;
     var totERR = log.filter(function(l){return !l.ok;}).length;
     var totNS = rows.length - log.length;
-    var S = '<Style ss:ID="', E = '</Style>';
-    var styles = S+'hdr"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#1a3a2a" ss:Pattern="Solid"/>'+E
-        +S+'ttl"><Font ss:Bold="1" ss:Size="14"/>'+E+S+'bld"><Font ss:Bold="1"/>'+E
-        +S+'ok"><Interior ss:Color="#E8F5E9" ss:Pattern="Solid"/>'+E
-        +S+'er"><Interior ss:Color="#FFEBEE" ss:Pattern="Solid"/>'+E
-        +S+'wn"><Interior ss:Color="#FFF9C4" ss:Pattern="Solid"/>'+E
-        +STILI_IMPORTO;
 
     var hdrs = ['N\u00B0','Data','Tributo','Descrizione','Anno Rif.','Importo Debito','Importo Credito','Codice Atto','Nome File','Stato'];
-    var hrow = hdrs.map(function(h){return cella(h,'String','hdr');}).join('');
+    var hrow = hdrs.map(function(h){return cella(h,'String','hdr');});
     var widths = [40,100,60,250,80,120,120,120,280,110];
-    var cols = widths.map(function(w){return '<Column ss:Width="'+w+'"/>';}).join('');
     var logMap = {}; log.forEach(function(l,idx){logMap[idx]=l;});
     var drows = rows.map(function(r,i) {
         var l = logMap[i]||null;
         var fname = l?l.filename:'', stato = l?(l.ok?'Scaricato':'Errore'):'Non scaricato';
         var sty = l?(l.ok?'ok':'er'):'wn';
-        return '<Row>'+cella(i+1,'Number',sty)+cella(r.date,'String',sty)+cella(r.tributo||'','String',sty)+cella(r.descrizione||'','String',sty)+cella(r.annoRif||'','String',sty)+cellaImporto(r.importo,sty)+cellaImporto(r.credito||'',sty)+cella(r.codiceAtto||'','String',sty)+cella(fname,'String',sty)+cella(stato,'String',sty)+'</Row>';
-    }).join('');
-    var sh1 = '<Worksheet ss:Name="Elenco F24 Ricerca"><Table>'+cols+'<Row>'+hrow+'</Row>'+drows+'</Table></Worksheet>';
-    var sh2 = '<Worksheet ss:Name="Riepilogo"><Table><Column ss:Width="220"/><Column ss:Width="180"/>'
-        +'<Row>'+cella('Cassetto_Utility v'+VERSION+' \u2014 Report F24 Ricerca','String','ttl')+'</Row>'
-        +'<Row>'+cella('Identificativo:')+cella(cod)+'</Row>'
-        +'<Row>'+cella('Modalit\u00e0:')+cella(tipoCod)+'</Row>'
-        +'<Row>'+cella('Data report:')+cella(nowStr)+'</Row>';
-    if (filtroAtto) sh2 += '<Row>'+cella('Filtro Codice Atto:')+cella(filtroAtto)+'</Row>';
-    sh2 += '<Row/>'
-        +'<Row>'+cella('Tributi trovati:','String','bld')+cella(rows.length,'Number')+'</Row><Row/>'
-        +'<Row>'+cella('Scaricati:','String','bld')+cella(totOK,'Number','ok')+'</Row>'
-        +'<Row>'+cella('Errori:','String','bld')+cella(totERR,'Number','er')+'</Row>'
-        +'<Row>'+cella('Non scaricati:','String','bld')+cella(totNS,'Number','wn')+'</Row></Table></Worksheet>';
-    return '<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Styles>'+styles+'</Styles>'+sh1+sh2+'</Workbook>';
+        return [cella(i+1,'Number',sty),cella(r.date,'String',sty),cella(r.tributo||'','String',sty),cella(r.descrizione||'','String',sty),cella(r.annoRif||'','String',sty),cellaImporto(r.importo,sty),cellaImporto(r.credito||'',sty),cella(r.codiceAtto||'','String',sty),cella(fname,'String',sty),cella(stato,'String',sty)];
+    });
+    var sh1 = { nome:'Elenco F24 Ricerca', colonne:widths, righe:[hrow].concat(drows) };
+
+    var righe2 = [
+        [cella('Cassetto_Utility v'+VERSION+' \u2014 Report F24 Ricerca','String','ttl')],
+        [cella('Identificativo:'),cella(cod)],
+        [cella('Modalit\u00e0:'),cella(tipoCod)],
+        [cella('Data report:'),cella(nowStr)]
+    ];
+    if (filtroAtto) righe2.push([cella('Filtro Codice Atto:'),cella(filtroAtto)]);
+    righe2.push([]);
+    righe2.push([cella('Tributi trovati:','String','bld'),cella(rows.length,'Number')]);
+    righe2.push([]);
+    righe2.push([cella('Scaricati:','String','bld'),cella(totOK,'Number','ok')]);
+    righe2.push([cella('Errori:','String','bld'),cella(totERR,'Number','er')]);
+    righe2.push([cella('Non scaricati:','String','bld'),cella(totNS,'Number','wn')]);
+    var sh2 = { nome:'Riepilogo', colonne:[220,180], righe:righe2 };
+    return [sh1, sh2];
 }
 
-/* XLS "Dettaglio Tributi F24" — una riga per ogni codice tributo/causale, con sezione,
+/* Fogli "Dettaglio Tributi F24" — una riga per ogni codice tributo/causale, con sezione,
    descrizione, codice atto e importi a credito/debito separati. */
 function buildXLSTributi(tribRows, nF24, errLetture) {
     var idInfo = getIdentifier(), cod = idInfo.code;
     var tipoCod = isDelegato() ? 'Cassetto Delegato' : (idInfo.tipo === 'cf' ? 'Cassetto Proprio (CF)' : 'Cassetto Proprio (PIVA)');
     var anno = getParam('Anno') || '', now = new Date();
     var nowStr = now.toLocaleDateString('it-IT')+' '+now.toLocaleTimeString('it-IT');
-    var S = '<Style ss:ID="', E = '</Style>';
-    var styles = S+'hdr"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#1a3a2a" ss:Pattern="Solid"/>'+E
-        +S+'ttl"><Font ss:Bold="1" ss:Size="14"/>'+E+S+'bld"><Font ss:Bold="1"/>'+E
-        +STILI_IMPORTO;
 
     var hdrs = ['Data versamento','Protocollo','Sezione','Codice tributo','Descrizione','Rateazione, regione/provincia, mese rif.','Anno di riferimento','Codice atto','Importo a credito','Importo a debito'];
-    var hrow = hdrs.map(function(h){return cella(h,'String','hdr');}).join('');
+    var hrow = hdrs.map(function(h){return cella(h,'String','hdr');});
     var widths = [110,200,180,90,300,200,110,110,120,120];
-    var cols = widths.map(function(w){return '<Column ss:Width="'+w+'"/>';}).join('');
     var drows = tribRows.map(function(r) {
-        return '<Row>'+cella(r.data,'String')+cella(r.protocollo,'String')+cella(r.sezione,'String')
-            +cella(r.codice,'String')+cella(r.descrizione,'String')+cella(r.rateazione,'String')+cella(r.anno,'String')
-            +cella(r.codiceAtto,'String')+cellaImporto(r.credito)+cellaImporto(r.debito)+'</Row>';
-    }).join('');
-    var sh1 = '<Worksheet ss:Name="Dettaglio Tributi"><Table>'+cols+'<Row>'+hrow+'</Row>'+drows+'</Table></Worksheet>';
+        return [cella(r.data,'String'),cella(r.protocollo,'String'),cella(r.sezione,'String'),
+            cella(r.codice,'String'),cella(r.descrizione,'String'),cella(r.rateazione,'String'),cella(r.anno,'String'),
+            cella(r.codiceAtto,'String'),cellaImporto(r.credito),cellaImporto(r.debito)];
+    });
+    var sh1 = { nome:'Dettaglio Tributi', colonne:widths, righe:[hrow].concat(drows) };
 
-    var sh2 = '<Worksheet ss:Name="Riepilogo"><Table><Column ss:Width="220"/><Column ss:Width="180"/>'
-        +'<Row>'+cella('Cassetto_Utility v'+VERSION+' — Dettaglio Tributi F24','String','ttl')+'</Row>'
-        +'<Row>'+cella('Identificativo (PIVA/CF):')+cella(cod)+'</Row>'
-        +'<Row>'+cella('Modalità:')+cella(tipoCod)+'</Row>'
-        +'<Row>'+cella('Anno selezionato:')+cella(anno)+'</Row>'
-        +'<Row>'+cella('Data report:')+cella(nowStr)+'</Row><Row/>'
-        +'<Row>'+cella('F24 letti:','String','bld')+cella(nF24,'Number')+'</Row>'
-        +'<Row>'+cella('Righi tributo totali:','String','bld')+cella(tribRows.length,'Number')+'</Row>'
-        +'<Row>'+cella('F24 non letti (errore):','String','bld')+cella(errLetture,'Number')+'</Row>'
-        +'</Table></Worksheet>';
+    var sh2 = { nome:'Riepilogo', colonne:[220,180], righe:[
+        [cella('Cassetto_Utility v'+VERSION+' — Dettaglio Tributi F24','String','ttl')],
+        [cella('Identificativo (PIVA/CF):'),cella(cod)],
+        [cella('Modalità:'),cella(tipoCod)],
+        [cella('Anno selezionato:'),cella(anno)],
+        [cella('Data report:'),cella(nowStr)],
+        [],
+        [cella('F24 letti:','String','bld'),cella(nF24,'Number')],
+        [cella('Righi tributo totali:','String','bld'),cella(tribRows.length,'Number')],
+        [cella('F24 non letti (errore):','String','bld'),cella(errLetture,'Number')]
+    ] };
 
-    return '<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Styles>'+styles+'</Styles>'+sh1+sh2+'</Workbook>';
+    return [sh1, sh2];
 }
 
-function dlXLS(content, fname) {
-    var blob = new Blob([content],{type:'application/vnd.ms-excel;charset=UTF-8'});
+/* ═══════════════════════════════════════════════════════════════
+   SCRITTURA XLSX (OOXML)
+
+   Fino alla 0.09 i report erano SpreadsheetML 2003 - cioe' XML - salvati
+   con estensione .xls. Excel li apriva, ma prima mostrava ogni volta l'avviso
+   che il formato del file non corrisponde all'estensione. Un file che si
+   annuncia sbagliato, aperto davanti a un cliente, sembra un file rotto.
+
+   Qui si scrive un .xlsx vero: un archivio ZIP con dentro le parti OOXML.
+   Nessuna libreria - il sorgente deve restare autoconsistente, perche' lo
+   stesso file gira come content script sotto la CSP delle estensioni, dove un
+   @require non arriverebbe mai. E nessuna compressione: i report sono piccoli,
+   il metodo ZIP "store" e' legittimo quanto deflate e costa un CRC32 invece
+   di un compressore scritto a mano.
+   ═══════════════════════════════════════════════════════════════ */
+
+var CRC_TABELLA = (function() {
+    var t = new Uint32Array(256);
+    for (var n = 0; n < 256; n++) {
+        var c = n;
+        for (var k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+        t[n] = c >>> 0;
+    }
+    return t;
+})();
+
+function crc32(bytes) {
+    var c = 0xFFFFFFFF;
+    for (var i = 0; i < bytes.length; i++) c = CRC_TABELLA[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+}
+
+/**
+ * Un archivio ZIP senza compressione. `parti` e' un array di
+ * `{nome, dati:Uint8Array}`; torna l'archivio come Uint8Array.
+ */
+function zipStore(parti) {
+    var enc = new TextEncoder();
+    var adesso = new Date();
+    var ora = ((adesso.getHours() << 11) | (adesso.getMinutes() << 5) | (adesso.getSeconds() >> 1)) & 0xFFFF;
+    var giorno = (((adesso.getFullYear() - 1980) << 9) | ((adesso.getMonth() + 1) << 5) | adesso.getDate()) & 0xFFFF;
+
+    var voci = parti.map(function(p) {
+        return { nome: enc.encode(p.nome), dati: p.dati, crc: crc32(p.dati), offset: 0 };
+    });
+
+    var misuraLocali = 0, misuraCentrale = 0;
+    voci.forEach(function(v) {
+        misuraLocali += 30 + v.nome.length + v.dati.length;
+        misuraCentrale += 46 + v.nome.length;
+    });
+
+    var buf = new Uint8Array(misuraLocali + misuraCentrale + 22);
+    var vista = new DataView(buf.buffer);
+    var p = 0;
+
+    voci.forEach(function(v) {
+        v.offset = p;
+        vista.setUint32(p,      0x04034B50, true);  // firma dell'intestazione locale
+        vista.setUint16(p + 4,  20, true);          // versione minima per estrarre
+        vista.setUint16(p + 6,  0x0800, true);      // nomi in UTF-8
+        vista.setUint16(p + 8,  0, true);           // metodo: store
+        vista.setUint16(p + 10, ora, true);
+        vista.setUint16(p + 12, giorno, true);
+        vista.setUint32(p + 14, v.crc, true);
+        vista.setUint32(p + 18, v.dati.length, true);
+        vista.setUint32(p + 22, v.dati.length, true);
+        vista.setUint16(p + 26, v.nome.length, true);
+        vista.setUint16(p + 28, 0, true);           // campo extra assente
+        p += 30;
+        buf.set(v.nome, p); p += v.nome.length;
+        buf.set(v.dati, p); p += v.dati.length;
+    });
+
+    var inizioCentrale = p;
+    voci.forEach(function(v) {
+        vista.setUint32(p,      0x02014B50, true);  // firma della voce di indice
+        vista.setUint16(p + 4,  20, true);
+        vista.setUint16(p + 6,  20, true);
+        vista.setUint16(p + 8,  0x0800, true);
+        vista.setUint16(p + 10, 0, true);
+        vista.setUint16(p + 12, ora, true);
+        vista.setUint16(p + 14, giorno, true);
+        vista.setUint32(p + 16, v.crc, true);
+        vista.setUint32(p + 20, v.dati.length, true);
+        vista.setUint32(p + 24, v.dati.length, true);
+        vista.setUint16(p + 28, v.nome.length, true);
+        // extra, commento, disco, attributi: tutti zero, e l'array nasce a zero
+        vista.setUint32(p + 42, v.offset, true);
+        p += 46;
+        buf.set(v.nome, p); p += v.nome.length;
+    });
+
+    vista.setUint32(p,      0x06054B50, true);      // fine dell'indice centrale
+    vista.setUint16(p + 8,  voci.length, true);
+    vista.setUint16(p + 10, voci.length, true);
+    vista.setUint32(p + 12, p - inizioCentrale, true);
+    vista.setUint32(p + 16, inizioCentrale, true);
+    return buf;
+}
+
+/*
+ * Gli stili sono un insieme chiuso e sempre lo stesso, quindi styles.xml e'
+ * una costante e non si costruisce a ogni report. STILI_XLSX dice a che
+ * posizione di <cellXfs> corrisponde ogni nome usato dai builder: i nomi sono
+ * quelli di prima - hdr, ok, er, wn... - e i colori pure.
+ */
+var STILI_XLSX = { hdr:1, ttl:2, bld:3, ok:4, er:5, wn:6, aut:7, dip:8, num:9, okn:10, ern:11, wnn:12 };
+
+var XLSX_STYLES = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    + '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+    + '<numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0.00"/></numFmts>'
+    + '<fonts count="4">'
+        + '<font><sz val="11"/><name val="Calibri"/></font>'
+        + '<font><b/><sz val="11"/><name val="Calibri"/></font>'
+        + '<font><b/><color rgb="FFFFFFFF"/><sz val="11"/><name val="Calibri"/></font>'
+        + '<font><b/><sz val="14"/><name val="Calibri"/></font>'
+    + '</fonts>'
+    + '<fills count="8">'
+        + '<fill><patternFill patternType="none"/></fill>'
+        + '<fill><patternFill patternType="gray125"/></fill>'
+        + '<fill><patternFill patternType="solid"><fgColor rgb="FFE8F5E9"/><bgColor indexed="64"/></patternFill></fill>'
+        + '<fill><patternFill patternType="solid"><fgColor rgb="FFFFEBEE"/><bgColor indexed="64"/></patternFill></fill>'
+        + '<fill><patternFill patternType="solid"><fgColor rgb="FFFFF9C4"/><bgColor indexed="64"/></patternFill></fill>'
+        + '<fill><patternFill patternType="solid"><fgColor rgb="FF1A3A2A"/><bgColor indexed="64"/></patternFill></fill>'
+        + '<fill><patternFill patternType="solid"><fgColor rgb="FFE3F2FD"/><bgColor indexed="64"/></patternFill></fill>'
+        + '<fill><patternFill patternType="solid"><fgColor rgb="FFFFF3E0"/><bgColor indexed="64"/></patternFill></fill>'
+    + '</fills>'
+    + '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
+    + '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+    + '<cellXfs count="13">'
+        + '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
+        + '<xf numFmtId="0" fontId="2" fillId="5" borderId="0" xfId="0" applyFont="1" applyFill="1"/>'
+        + '<xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
+        + '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
+        + '<xf numFmtId="0" fontId="0" fillId="2" borderId="0" xfId="0" applyFill="1"/>'
+        + '<xf numFmtId="0" fontId="0" fillId="3" borderId="0" xfId="0" applyFill="1"/>'
+        + '<xf numFmtId="0" fontId="0" fillId="4" borderId="0" xfId="0" applyFill="1"/>'
+        + '<xf numFmtId="0" fontId="0" fillId="6" borderId="0" xfId="0" applyFill="1"/>'
+        + '<xf numFmtId="0" fontId="0" fillId="7" borderId="0" xfId="0" applyFill="1"/>'
+        + '<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>'
+        + '<xf numFmtId="164" fontId="0" fillId="2" borderId="0" xfId="0" applyNumberFormat="1" applyFill="1"/>'
+        + '<xf numFmtId="164" fontId="0" fillId="3" borderId="0" xfId="0" applyNumberFormat="1" applyFill="1"/>'
+        + '<xf numFmtId="164" fontId="0" fillId="4" borderId="0" xfId="0" applyNumberFormat="1" applyFill="1"/>'
+    + '</cellXfs>'
+    + '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
+    + '</styleSheet>';
+
+/** Indice di colonna (1 = A) in lettere. */
+function colonnaLettera(i) {
+    var s = '';
+    while (i > 0) { var r = (i - 1) % 26; s = String.fromCharCode(65 + r) + s; i = (i - 1 - r) / 26; }
+    return s;
+}
+
+/*
+ * Le larghezze dei report sono in punti, come le voleva SpreadsheetML; OOXML
+ * le vuole in caratteri. Un carattere di Calibri 11 sta in sette pixel, piu'
+ * cinque pixel di margini della cella.
+ */
+function larghezzaInCaratteri(punti) {
+    var px = Number(punti) * 96 / 72;
+    return Math.round(Math.max(1, (px - 5) / 7) * 100) / 100;
+}
+
+function cellaXML(c, rif) {
+    var s = STILI_XLSX[c.s] ? ' s="' + STILI_XLSX[c.s] + '"' : '';
+    if (c.t === 'Number') {
+        var n = typeof c.v === 'number' ? c.v : Number(c.v);
+        // Una cella numerica vuota non e' un numero: meglio lasciarla vuota
+        // che scriverci uno zero che nessuno ha contato.
+        if (c.v === '' || !isFinite(n)) return '<c r="' + rif + '"' + s + '/>';
+        return '<c r="' + rif + '"' + s + '><v>' + n + '</v></c>';
+    }
+    if (c.v === '') return '<c r="' + rif + '"' + s + '/>';
+    return '<c r="' + rif + '"' + s + ' t="inlineStr"><is><t xml:space="preserve">' + esc(c.v) + '</t></is></c>';
+}
+
+function foglioXML(foglio) {
+    var cols = '';
+    if (foglio.colonne && foglio.colonne.length) {
+        cols = '<cols>' + foglio.colonne.map(function(w, i) {
+            return '<col min="' + (i+1) + '" max="' + (i+1) + '" width="' + larghezzaInCaratteri(w) + '" customWidth="1"/>';
+        }).join('') + '</cols>';
+    }
+    var righe = foglio.righe.map(function(riga, r) {
+        if (!riga || !riga.length) return '<row r="' + (r+1) + '"/>';
+        return '<row r="' + (r+1) + '">' + riga.map(function(c, i) {
+            return cellaXML(c, colonnaLettera(i+1) + (r+1));
+        }).join('') + '</row>';
+    }).join('');
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        + '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+        + cols + '<sheetData>' + righe + '</sheetData></worksheet>';
+}
+
+/* Excel rifiuta i nomi di foglio con []:*?/\ e quelli oltre i 31 caratteri. */
+function nomeFoglio(n) {
+    var s = String(n === undefined || n === null ? '' : n).replace(/[\[\]:*?\/\\]/g, ' ').trim().slice(0, 31);
+    return s || 'Foglio';
+}
+
+/** Da `[{nome, colonne, righe}, ...]` a un .xlsx completo (Uint8Array). */
+function buildXLSX(fogli) {
+    var enc = new TextEncoder();
+    var CT = 'application/vnd.openxmlformats-officedocument.spreadsheetml';
+    var REL = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+    var relStili = 'rId' + (fogli.length + 1);
+
+    var tipi = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+        + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+        + '<Default Extension="xml" ContentType="application/xml"/>'
+        + '<Override PartName="/xl/workbook.xml" ContentType="' + CT + '.sheet.main+xml"/>'
+        + fogli.map(function(f, i) {
+            return '<Override PartName="/xl/worksheets/sheet' + (i+1) + '.xml" ContentType="' + CT + '.worksheet+xml"/>';
+        }).join('')
+        + '<Override PartName="/xl/styles.xml" ContentType="' + CT + '.styles+xml"/>'
+        + '</Types>';
+
+    var relsRadice = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        + '<Relationship Id="rId1" Type="' + REL + '/officeDocument" Target="xl/workbook.xml"/>'
+        + '</Relationships>';
+
+    var libro = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        + '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="' + REL + '"><sheets>'
+        + fogli.map(function(f, i) {
+            return '<sheet name="' + esc(nomeFoglio(f.nome)) + '" sheetId="' + (i+1) + '" r:id="rId' + (i+1) + '"/>';
+        }).join('')
+        + '</sheets></workbook>';
+
+    var relsLibro = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        + fogli.map(function(f, i) {
+            return '<Relationship Id="rId' + (i+1) + '" Type="' + REL + '/worksheet" Target="worksheets/sheet' + (i+1) + '.xml"/>';
+        }).join('')
+        + '<Relationship Id="' + relStili + '" Type="' + REL + '/styles" Target="styles.xml"/>'
+        + '</Relationships>';
+
+    var parti = [
+        { nome: '[Content_Types].xml', dati: enc.encode(tipi) },
+        { nome: '_rels/.rels',         dati: enc.encode(relsRadice) },
+        { nome: 'xl/workbook.xml',     dati: enc.encode(libro) },
+        { nome: 'xl/_rels/workbook.xml.rels', dati: enc.encode(relsLibro) },
+        { nome: 'xl/styles.xml',       dati: enc.encode(XLSX_STYLES) }
+    ];
+    fogli.forEach(function(f, i) {
+        parti.push({ nome: 'xl/worksheets/sheet' + (i+1) + '.xml', dati: enc.encode(foglioXML(f)) });
+    });
+
+    return zipStore(parti);
+}
+
+function dlXLS(fogli, fname) {
+    var blob = new Blob([buildXLSX(fogli)],
+        {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
     saveBlob(blob, fname);
 }
 
@@ -2449,7 +2686,7 @@ async function eseguiAzione(action) {
         var rows3 = isF24List ? collectF24() : collectF23();
         if (!rows3.length) { showSt('Nessun versamento trovato.', 0, 'avviso'); concludiReport(true); return; }
         var cod = getIdentifier().code, anno = getParam('Anno') || 'ANNO';
-        dlXLS(buildXLS(rows3, dlLog), safe(cod)+'_'+safe(anno)+'_Report'+docType+'_CassettoUtility.xls');
+        dlXLS(buildXLS(rows3, dlLog), safe(cod)+'_'+safe(anno)+'_Report'+docType+'_CassettoUtility.xlsx');
         showSt('Report Excel generato.', 100, 'riuscito'); concludiReport(false); return;
     }
 
@@ -2475,7 +2712,7 @@ async function eseguiAzione(action) {
             await sleep(600);
         }
         var codT = getIdentifier().code, annoT = getParam('Anno') || 'ANNO';
-        dlXLS(buildXLSTributi(trib, rowsT.length, errLetture), safe(codT)+'_'+safe(annoT)+'_DettaglioTributiF24_CassettoUtility.xls');
+        dlXLS(buildXLSTributi(trib, rowsT.length, errLetture), safe(codT)+'_'+safe(annoT)+'_DettaglioTributiF24_CassettoUtility.xlsx');
         showSt('Dettaglio tributi generato: '+trib.length+' righi da '+rowsT.length+' F24'+(errLetture?', '+errLetture+' non letti':'')+'.', 100, errLetture?'avviso':'riuscito');
         setDis(false); concludiReport(errLetture > 0); return;
     }
@@ -2496,7 +2733,7 @@ async function eseguiAzione(action) {
         var filtroAttoXls = '';
         var attoInputXls = document.getElementById('CU_AttoInput');
         if (attoInputXls) filtroAttoXls = attoInputXls.value.trim();
-        dlXLS(buildXLSSel(selR, dlLog, filtroAttoXls), safe(getIdentifier().code)+'_RicercaF24_CassettoUtility.xls');
+        dlXLS(buildXLSSel(selR, dlLog, filtroAttoXls), safe(getIdentifier().code)+'_RicercaF24_CassettoUtility.xlsx');
         showSt('Report Excel della ricerca F24 generato.', 100, 'riuscito'); setDis(false); concludiReport(false); return;
     }
 
