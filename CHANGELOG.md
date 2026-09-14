@@ -1,81 +1,53 @@
 # Changelog
 
-## [0.09-beta] — 2026-08-09
-
-Versione di allineamento al progetto gemello [FE-Utility](https://github.com/denvermotel/fe-utility):
-stessa impalcatura dell'interfaccia, stessi temi, stesso modo di confezionare le
-estensioni. Le funzioni sono quelle della 0.08; cambia come si presentano e dove
-si possono usare.
+## [0.10-beta] — 2026-08-17
 
 ### Nuovo
-- **Estensioni Chrome e Firefox**: lo stesso sorgente dello userscript, confezionato
-  per i due store. `estensione/pacchetto.sh` produce gli zip e avverte se la versione
-  dei manifest non corrisponde a quella dello script. L'icona apre un menu con i salti
-  alle sezioni del cassetto e le impostazioni; scarichi e report restano nella barra,
-  perché dipendono dalla pagina aperta e un popup non sa quale sia
-- **Quattro temi di colore** (Ardesia e ottone, Notte nordica, Blu notte e ambra,
-  Grafite e menta), scelti dal pannello impostazioni e salvati fra le sessioni. Sono
-  gli stessi di FE-Utility; il valore di partenza è diverso apposta, così due barre
-  aperte insieme non si confondono
-- **Pannello impostazioni** nella barra: quietanza o copia per gli F24 quietanzati,
-  conferma sui lotti lunghi, tema, e - come estensione - se l'icona apre il menu o la barra
-- **Conferma prima dei lotti lunghi estesa a F24 e F23**: fino alla 0.08 la chiedevano
-  solo le CU, ma il tempo di attesa non dipende dal tipo di documento
-- **Importi come numeri nei fogli**: le colonne d'importo di tutti e quattro i report
-  escono come numeri veri, con formato `#,##0.00`, e si sommano in Excel senza
-  conversioni. La conversione è prudente: un valore che non si riconosce come importo
-  resta testo com'era, senza inventare uno zero, e una casella vuota resta vuota
-- **Verifiche statiche** (`node test/esegui.mjs`): versioni allineate fra script e
-  manifest, requisiti degli store, corrispondenza fra i comandi del menu e le azioni
-  dello userscript, contrasti di tutti i temi, conversione degli importi
-
-### Modifiche
-- **Barra ridisegnata**: tre tinte di pulsante secondo il ruolo - accento per l'azione
-  principale della pagina, ardesia per quelle di contorno, contorno vuoto per la
-  navigazione - al posto dei sette colori della 0.08, che erano un colore per pulsante
-  e non distinguevano niente
-- **Esito detto dal colore e dalle parole**, non da un'emoji davanti al testo
-- **Deposito unico** su tre ambienti (`GM_setValue`, `chrome.storage.local`,
-  `localStorage`) con letture sincrone da cache e scritture accorpate
-- **Selettore del periodo** rifatto con la palette chiara, perché vive nel form bianco
-  del cassetto e un blocco scuro là in mezzo si legge come un errore di impaginazione
-- **Altezza della barra**: aggiornata quando cambia davvero, con un `ResizeObserver`
-  come rete di sicurezza, al posto del controllo ogni 600 ms per tutta la sessione
-- **Pagina delle istruzioni** rifatta sulla stessa impalcatura del gemello, con
-  l'informativa privacy in `docs/privacy.html`
+- **Dichiarazioni di intento**: scarico PDF in blocco dall'elenco (`Ric=DEN`), Report Excel con dichiarante, destinatario, casella dogana, tipo operazione e soglie, PDF singolo dal dettaglio
+- **Resoconto con × di chiusura**: senza errori si chiude da sé dopo 20s, altrimenti resta finché non la si chiude a mano; il mouse sopra sospende la chiusura automatica
 
 ### Fix
-- Il dialogo di conferma non costruisce più il proprio contenuto con `innerHTML` a
-  partire da testo digitato dall'utente: il filtro per codice atto ci finiva dentro
-- **Zeri mancanti nei report**: `esc()` trasformava lo zero in stringa vuota, e uno
-  zero finisce in celle dichiarate `ss:Type="Number"`. Colpiva i contatori dei fogli
-  Riepilogo di tutti e quattro i report nel caso più comune, quello del report
-  generato senza aver scaricato nulla
-- **File HTML salvati come PDF**: il riconoscimento si basava sulla dimensione del
-  file, e una pagina di sessione scaduta la supera. Ora si guardano i primi byte, che
-  in un PDF sono `%PDF`: quei documenti finivano sul disco con estensione `.pdf` e
-  venivano riportati «Scaricato» nel foglio
-- **Preferenza persa cambiandola dal menu**: il menu invitava la pagina a rileggere lo
-  storage, ma la propria scrittura era asincrona e non attesa, e la rilettura poteva
-  riportare indietro il valore appena cambiato. Ora il valore viaggia nel messaggio
-- **Barra bloccata dopo un errore**: un'eccezione a metà di un lotto saltava lo
-  sblocco dei pulsanti e lasciava la barra inerte fino al ricaricamento, senza dirlo
-- **Su Firefox la barra poteva non comparire affatto**: `browser.*` restituisce
-  promesse e ignora la callback, e l'avvio aspetta la lettura delle preferenze prima
-  di disegnare. Ora si accettano entrambe le forme, con un tempo massimo oltre il
-  quale si parte con i valori predefiniti
-- Il cambio di tema non cancella più l'avanzamento di uno scarico in corso, e non
-  perde più anno e periodo scelti nel selettore
-- La copia dei protocolli negli appunti dice quando non riesce, invece di tacere
-- La × e l'ingranaggio sono disabilitati durante un lotto: chiuderla non lo fermava,
-  toglieva solo il modo di vederlo
-- Rimossa la scrittura di un registro degli scarichi che nessuno rileggeva mai e che
-  cresceva a ogni anno interrogato
+- Barra, linguetta, dialoghi e selettore periodo restavano nel foglio in stampa: ora spariscono con `@media print`, tranne la barra (stile inline `!important`) tolta a mano su `beforeprint`/`afterprint`
+- Barra sul sito di presentazione disallineata da quella vera: mancavano il pulsante Protocolli, la × di chiusura, il numero di versione
+- Report Excel salvati come `.xlsx` vero: prima erano XML con estensione `.xls`, ed Excel avvertiva del formato a ogni apertura
+- Cassetto delegato con cliente persona fisica: si cercava solo la partita IVA e si finiva sul codice dello studio. Ora si cerca prima il codice fiscale; se nessuno dei due si legge, esce `DELEGANTE` invece di un codice plausibile e sbagliato
+
+## [0.09-beta] — 2026-08-09
+
+Allineamento a [FE-Utility](https://github.com/denvermotel/fe-utility): stessa interfaccia, stessi temi, stesso confezionamento delle estensioni. Le funzioni sono quelle della 0.08.
+
+### Nuovo
+- **Estensioni Chrome e Firefox** dallo stesso sorgente dello userscript. `estensione/pacchetto.sh` produce gli zip e avverte se la versione dei manifest non corrisponde. L'icona apre un menu con i salti alle sezioni e le impostazioni; scarichi e report restano nella barra
+- **Quattro temi di colore** (Ardesia e ottone, Notte nordica, Blu notte e ambra, Grafite e menta), scelti dal pannello impostazioni e salvati fra le sessioni
+- **Pannello impostazioni** nella barra: quietanza o copia per gli F24 quietanzati, conferma sui lotti lunghi, tema, e — come estensione — se l'icona apre il menu o la barra
+- **Conferma prima dei lotti lunghi** estesa a F24 e F23, non più solo alle CU
+- **Importi come numeri nei fogli**, formato `#,##0.00`, sommabili in Excel senza conversioni; un valore non riconosciuto resta testo, una cella vuota resta vuota
+- **Verifiche statiche** (`node test/esegui.mjs`): versioni allineate fra script e manifest, requisiti degli store, corrispondenza comandi menu/azioni, contrasti dei temi
+
+### Modifiche
+- **Barra ridisegnata**: tre tinte di pulsante per ruolo (accento, ardesia, contorno) al posto dei sette colori della 0.08
+- **Esito detto dal colore e dalle parole**, non da un'emoji
+- **Deposito unico** su tre ambienti (`GM_setValue`, `chrome.storage.local`, `localStorage`), letture sincrone da cache
+- **Selettore del periodo** con palette chiara, perché vive nel form bianco del cassetto
+- **Altezza della barra** aggiornata con `ResizeObserver` invece del controllo ogni 600 ms
+- **Pagina delle istruzioni** rifatta sull'impalcatura del gemello, con `docs/privacy.html`
+
+### Fix
+- Il dialogo di conferma non costruisce più il contenuto con `innerHTML` da testo digitato dall'utente (filtro codice atto)
+- **Zeri mancanti nei report**: `esc()` trasformava lo zero in stringa vuota nei contatori dei fogli Riepilogo
+- **File HTML salvati come PDF**: il riconoscimento era sulla dimensione, ora sui primi byte (`%PDF`)
+- **Preferenza persa cambiandola dal menu**: la rilettura poteva arrivare prima della scrittura e riportare indietro il valore. Ora viaggia nel messaggio
+- **Barra bloccata dopo un errore** a metà di un lotto, senza sblocco dei pulsanti
+- **Su Firefox la barra poteva non comparire**: `browser.*` restituisce promesse e ignora la callback. Ora si accettano entrambe le forme, con un tempo massimo
+- Il cambio di tema non cancella più l'avanzamento di uno scarico in corso né anno/periodo scelti
+- La copia dei protocolli dice quando non riesce, invece di tacere
+- La × e l'ingranaggio sono disabilitati durante un lotto
+- Rimosso un registro degli scarichi che nessuno rileggeva mai
 
 ## [0.08-beta] — 2026-06-18
 
 ### Nuovo
-- **Report "Dettaglio Tributi F24"**: nuovo pulsante 📑 nella lista F24 che legge il dettaglio di ogni F24 dell'anno selezionato (fetch sequenziale con barra di avanzamento) e genera un Excel con **una riga per ogni codice tributo/causale**. Colonne: Data versamento, Protocollo, Sezione (Erario/INPS/INAIL/Regioni/IMU…), Codice tributo, Descrizione (dal dettaglio, dove presente), Rateazione/regione/provincia/mese rif., Anno di riferimento, Codice atto, Importo a credito e Importo a debito separati. Foglio di riepilogo con conteggio F24 letti e righi totali
+- **Report "Dettaglio tributi F24"**: una riga per codice tributo/causale, letta dal dettaglio di ogni F24 dell'anno. Colonne: data, protocollo, sezione (Erario/INPS/INAIL/Regioni/IMU…), codice, descrizione, anno di riferimento, codice atto, credito e debito. Riepilogo con conteggio F24 e righi
 
 ## [0.07-beta] — 2026-03-26
 

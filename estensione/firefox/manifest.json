@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Cassetto_Utility",
-  "version": "0.9.0",
-  "description": "Scarico massivo di F24, F23 e CU ed export in Excel dal cassetto fiscale dell'Agenzia delle Entrate.",
+  "version": "0.10.0",
+  "description": "Scarico massivo di F24, F23, CU e dichiarazioni di intento, con export in Excel, dal cassetto fiscale dell'Agenzia delle Entrate.",
   "author": "denvermotel",
   "homepage_url": "https://denvermotel.github.io/Cassetto_Utility/",
   "browser_specific_settings": {

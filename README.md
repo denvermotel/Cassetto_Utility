@@ -1,14 +1,14 @@
 # Cassetto_Utility
 
 Toolbox per il Cassetto Fiscale dell'Agenzia delle Entrate
-(`cassetto.agenziaentrate.gov.it`). Scarica in blocco F24, F23 e certificazioni
-uniche, e li ribalta in fogli di calcolo fino al singolo codice tributo.
-Funziona sul cassetto proprio e su quello in delega.
+(`cassetto.agenziaentrate.gov.it`). Scarica in blocco F24, F23, certificazioni
+uniche e dichiarazioni di intento, e li ribalta in fogli di calcolo fino al
+singolo codice tributo. Funziona sul cassetto proprio e su quello in delega.
 
 Gira come userscript sotto Tampermonkey e come estensione Chrome o Firefox:
 è lo stesso identico file.
 
-[![Versione](https://img.shields.io/badge/versione-0.09%20beta-C9962F)](CHANGELOG.md)
+[![Versione](https://img.shields.io/badge/versione-0.10%20beta-C9962F)](CHANGELOG.md)
 [![Licenza: GPL v3](https://img.shields.io/badge/licenza-GPL%20v3-blue)](https://www.gnu.org/licenses/gpl-3.0)
 [![Tampermonkey](https://img.shields.io/badge/Tampermonkey-compatibile-brightgreen)](https://www.tampermonkey.net/)
 [![Greasemonkey](https://img.shields.io/badge/Greasemonkey-compatibile-orange)](https://www.greasespot.net/)
@@ -55,10 +55,12 @@ pagine vere, e ognuna offre cose diverse.
 | Elenco F24 | Scarica F24, Report Excel, Dettaglio tributi, Protocolli, Riepilogo |
 | Elenco F23 | Scarica F23, Report Excel, Riepilogo |
 | Elenco CU | Scarica CU, Report Excel CU, Riepilogo |
+| Elenco Dichiarazioni di intento | Scarica Dich. Intento, Report Excel Dich. Intento, Riepilogo |
 | Ricerca tributi F24 | Periodo; con i risultati anche Scarica F24, Report Excel, filtro per codice atto |
 | Dettaglio di un versamento | Copia del modello e, per gli F24 quietanzati, la quietanza |
 | Dettaglio CU | Genera PDF CU |
-| Altre pagine | I salti a Versamenti e Certificazioni uniche |
+| Dettaglio Dichiarazione di intento | Genera PDF Dich. Intento |
+| Altre pagine | I salti a Versamenti, Certificazioni uniche e Dichiarazioni di intento |
 
 ### Scarica F24, F23 e CU
 
@@ -71,6 +73,10 @@ chi archivia il modello può invertire la scelta dalle impostazioni.
 
 Un lotto avviato **non si interrompe**. Oltre i quindici documenti la barra
 chiede conferma prima di partire.
+
+A fine lavoro la riga con il conteggio resta, con una × per chiuderla. Se è
+andato tutto bene si chiude da sé dopo venti secondi; se c'è qualcosa di storto
+resta finché non la si legge.
 
 I nomi dei file sono `CODICE_ANNO_MM_GG_TIPO_idxN.pdf`, così ordinandoli per
 nome si ordinano per data.
@@ -99,6 +105,10 @@ Due fogli: l'elenco dei versamenti con lo stato di ogni scarico, e un
 riepilogo. Serve al riscontro fra quello che il cassetto dichiara e quello che
 è finito sul disco.
 
+I file sono `.xlsx`, il formato di Excel dal 2007: si aprono con un doppio clic
+e senza avvisi. Fino alla 0.09 erano XML salvati con estensione `.xls`, ed
+Excel avvertiva a ogni apertura che il formato non corrispondeva.
+
 Le colonne d'importo sono numeri veri, non testo: si sommano in Excel senza
 conversioni. La conversione è prudente - un valore che non si riconosce come
 importo resta scritto com'era invece di diventare uno zero, e una casella vuota
@@ -117,6 +127,13 @@ automaticamente:
 
 Per tutte: la denominazione del sostituto d'imposta, letta dal quadro DA. Le
 causali sono la tabella completa da normativa, trenta codici da `A` a `ZO`.
+
+### Dichiarazioni di intento
+
+PDF di tutte le dichiarazioni dell'anno, dichiarante o destinatario che siano,
+e un Report Excel con una riga per dichiarazione: dichiarante, destinatario,
+casella dogana (in colonna a parte, non incollata alla denominazione), tipo
+operazione (acquisti o importazioni) e le due soglie dichiarate.
 
 ### Ricerca per codice atto
 
@@ -175,7 +192,7 @@ bloccherebbe comunque.
 |---|---|---|
 | Chrome, Chromium, Edge | Tampermonkey | Funzionante (richiede «Consenti script utente») |
 | Firefox | Tampermonkey | Funzionante |
-| Safari | Userscripts (Mac App Store) | Non collaudato sulla 0.09 |
+| Safari | Userscripts (Mac App Store) | Non collaudato sulla 0.10 |
 | Firefox | Greasemonkey 4 | Non collaudato |
 
 ---
